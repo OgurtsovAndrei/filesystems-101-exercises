@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define INITIAL_CMD_BUFFER_SIZE 4096
+
 void ps(void) {
     struct dirent *entry;
     DIR *dp = opendir("/proc");
@@ -19,20 +21,21 @@ void ps(void) {
         if (entry->d_type == DT_DIR && atoi(entry->d_name) > 0) {
             pid_t pid = atoi(entry->d_name);
             FILE *cmdline_file, *environ_file;
-            char cmd_path[512], exe_path[512];
-            char *argv[256], *envp[256];
-            char env_path[512];
-            char cmd_buffer[4096], env_buffer[8192];
+            char *cmd_buffer = NULL, *env_buffer = NULL;
+            char exe_path[512], env_path[512], cmd_path[512];
+            char exe_buffer[4096];
+            char *argv[1024], *envp[256];
             size_t arg_index = 0;
             size_t envc = 0;
+            size_t cmd_buffer_size = INITIAL_CMD_BUFFER_SIZE;
 
             snprintf(exe_path, sizeof(exe_path), "/proc/%s/exe", entry->d_name);
-            ssize_t exe_len = readlink(exe_path, cmd_buffer, sizeof(cmd_buffer) - 1);
+            ssize_t exe_len = readlink(exe_path, exe_buffer, sizeof(exe_buffer) - 1);
             if (exe_len == -1) {
                 report_error(exe_path, errno);
                 continue;
             }
-            cmd_buffer[exe_len] = '\0';
+            exe_buffer[exe_len] = '\0';
 
             snprintf(cmd_path, sizeof(cmd_path), "/proc/%s/cmdline", entry->d_name);
             cmdline_file = fopen(cmd_path, "r");
@@ -41,16 +44,41 @@ void ps(void) {
                 continue;
             }
 
-            size_t read_bytes = fread(cmd_buffer, sizeof(char), sizeof(cmd_buffer), cmdline_file);
+            cmd_buffer = (char *)malloc(cmd_buffer_size);
+            if (cmd_buffer == NULL) {
+                fclose(cmdline_file);
+                continue;
+            }
+
+            size_t read_bytes = 0;
+            size_t total_read_bytes = 0;
+            while ((read_bytes = fread(cmd_buffer + total_read_bytes, 1, cmd_buffer_size - total_read_bytes,
+                                       cmdline_file)) > 0) {
+                total_read_bytes += read_bytes;
+                if (total_read_bytes == cmd_buffer_size) {
+                    cmd_buffer_size *= 2;
+                    cmd_buffer = (char *) realloc(cmd_buffer, cmd_buffer_size);
+                    if (cmd_buffer == NULL) {
+                        fclose(cmdline_file);
+                        goto cleanup;
+                    }
+                }
+            }
             fclose(cmdline_file);
 
-            if (read_bytes > 0) {
+            if (total_read_bytes > 0) {
                 char *start = cmd_buffer;
-                while (arg_index < 255 && start < cmd_buffer + read_bytes) {
-                    argv[arg_index] = strdup(start);
-                    if (argv[arg_index] == NULL) { break; }
-                    start += strlen(start) + 1;
-                    arg_index++;
+                char *end = cmd_buffer + total_read_bytes;
+
+                while (arg_index < 1023 && start < end) {
+                    if (*start != '\0') {
+                        argv[arg_index] = strdup(start);
+                        if (argv[arg_index] == NULL) { break; }
+                        arg_index++;
+                        start += strlen(start) + 1;
+                    } else {
+                        start++;
+                    }
                 }
             }
             argv[arg_index] = NULL;
@@ -59,7 +87,13 @@ void ps(void) {
             environ_file = fopen(env_path, "r");
             if (environ_file == NULL) { goto cleanup; }
 
-            read_bytes = fread(env_buffer, sizeof(char), sizeof(env_buffer), environ_file);
+            env_buffer = (char *)malloc(8192);
+            if (env_buffer == NULL) {
+                fclose(environ_file);
+                goto cleanup;
+            }
+
+            read_bytes = fread(env_buffer, sizeof(char), 8192, environ_file);
             fclose(environ_file);
 
             if (read_bytes > 0) {
@@ -73,9 +107,11 @@ void ps(void) {
             }
             envp[envc] = NULL;
 
-            report_process(pid, cmd_buffer, argv, envp);
+            report_process(pid, exe_buffer, argv, envp);
 
         cleanup:
+            if (cmd_buffer) free(cmd_buffer);
+            if (env_buffer) free(env_buffer);
             for (size_t j = 0; j < arg_index; j++) {
                 free(argv[j]);
             }
