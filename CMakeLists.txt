@@ -33,7 +33,7 @@ add_executable(01
 add_definitions(-D_FILE_OFFSET_BITS=64 )
 include_directories(02-fuse-helloworld)
 add_executable(02
-#        02-fuse-helloworld/solution1.c
+#        02-fuse-helloworld/solution1
         02-fuse-helloworld/solution.c
         02-fuse-helloworld/solution.h
         02-fuse-helloworld/main.c

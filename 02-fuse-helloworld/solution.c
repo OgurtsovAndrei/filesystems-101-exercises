@@ -1,4 +1,6 @@
-#define FUSE_USE_VERSION 25
+#ifndef USE_USE_VERSION
+#define FUSE_USE_VERSION 31
+#endif
 
 
 #include <fuse.h>
@@ -66,5 +68,5 @@ static struct fuse_operations hellofs_ops = {
 
 int helloworld(const char *mntp) {
     char *argv[] = {"exercise", "-f", (char *) mntp, NULL};
-    return fuse_main(3, argv, &hellofs_ops);
+    return fuse_main(3, argv, &hellofs_ops, NULL);
 }
