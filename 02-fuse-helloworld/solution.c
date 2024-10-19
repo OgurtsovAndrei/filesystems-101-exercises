@@ -66,19 +66,49 @@ static int hellofs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, 
 static int hellofs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
     if (strcmp(path, "/hello") != 0) return -ENOENT;
     if ((fi->flags & O_ACCMODE) != O_RDONLY) return -ENOENT;
-    const char* content = create_hello_string();
+    const char *content = create_hello_string();
     const int file_size = (int) strlen(content);
     if (offset == file_size) { return 0; }
     if (offset > file_size) { return 0; }
-    if (size > file_size - (size_t) offset){ size = file_size - offset; }
+    if (size > file_size - (size_t) offset) { size = file_size - offset; }
     memcpy(buf, content + offset, size);
     return (int) size;
 }
+
+static int hellofs_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+    (void) path;
+    (void) buf;
+    (void) size;
+    (void) offset;
+    (void) fi;
+
+    return -EROFS;
+}
+
+static int hellofs_truncate(const char *path, off_t size, struct fuse_file_info *fi) {
+    (void) path;
+    (void) size;
+    (void) fi;
+
+    return -EROFS;
+}
+
+static int hellofs_chmod(const char *path, mode_t mode, struct fuse_file_info *fi) {
+    (void) path;
+    (void) mode;
+    (void) fi;
+
+    return -EROFS;
+}
+
 
 static struct fuse_operations hellofs_ops = {
     .getattr = hellofs_getattr,
     .read = hellofs_read,
     .readdir = hellofs_readdir,
+    .write = hellofs_write,
+    .truncate = hellofs_truncate,
+    .chmod = hellofs_chmod,
 };
 
 int helloworld(const char *mntp) {
