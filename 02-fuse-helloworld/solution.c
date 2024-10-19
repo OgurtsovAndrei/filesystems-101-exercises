@@ -12,7 +12,8 @@
 
 static char *create_hello_string() {
     static char result[50];
-    sprintf(result, "hello, %d\n", getpid());
+    pid_t pid = fuse_get_context()->pid;
+    sprintf(result, "hello, %d\n", pid);
     return result;
 }
 

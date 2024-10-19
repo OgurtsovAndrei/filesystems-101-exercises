@@ -31,6 +31,10 @@ add_executable(01
 
 
 add_definitions(-D_FILE_OFFSET_BITS=64 )
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(FUSE3 REQUIRED fuse3 )
+include_directories(${FUSE3_INCLUDE_DIRS})
+
 include_directories(02-fuse-helloworld)
 add_executable(02
 #        02-fuse-helloworld/solution1
@@ -38,4 +42,4 @@ add_executable(02
         02-fuse-helloworld/solution.h
         02-fuse-helloworld/main.c
 )
-target_link_libraries(02 fuse)
+target_link_libraries(02 ${FUSE3_LIBRARIES})
