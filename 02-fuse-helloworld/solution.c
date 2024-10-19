@@ -106,6 +106,14 @@ static int hellofs_chmod(const char *path, mode_t mode, struct fuse_file_info *f
     return -EROFS;
 }
 
+static int hellofs_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
+    (void) path;
+    (void) mode;
+    (void) fi;
+
+    return -EROFS;
+}
+
 
 static struct fuse_operations hellofs_ops = {
     .getattr = hellofs_getattr,
@@ -115,6 +123,7 @@ static struct fuse_operations hellofs_ops = {
     .truncate = hellofs_truncate,
     .chmod = hellofs_chmod,
     .open = hellofs_open,
+    .create   = hellofs_create
 };
 
 int helloworld(const char *mntp) {
