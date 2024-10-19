@@ -62,6 +62,11 @@ static int hellofs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, 
     return 0;
 }
 
+static int hellofs_open(const char *path, struct fuse_file_info *fi) {
+    if (strcmp(path, "/hello") != 0) { return -ENOENT; }
+    if ((fi->flags & O_ACCMODE) != O_RDONLY) { return -EROFS; }
+    return 0;
+}
 
 static int hellofs_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
     if (strcmp(path, "/hello") != 0) return -ENOENT;
@@ -109,6 +114,7 @@ static struct fuse_operations hellofs_ops = {
     .write = hellofs_write,
     .truncate = hellofs_truncate,
     .chmod = hellofs_chmod,
+    .open = hellofs_open,
 };
 
 int helloworld(const char *mntp) {
