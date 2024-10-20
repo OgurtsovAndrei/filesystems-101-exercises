@@ -17,13 +17,12 @@ void abspath(const char *path) {
     char *path_to_resolve = initial_path;
     struct stat path_stat;
 
-    strcpy(resolved_path, "");
+    resolved_path[0] = '\0';
 
     if (path[0] != '/') {
-        strcpy(path_to_resolve, "/");
-        strcat(path_to_resolve, path);
+        snprintf(initial_path, sizeof(initial_path), "/%s", path);
     } else {
-        strcpy(path_to_resolve, path);
+        snprintf(initial_path, sizeof(initial_path), "%s", path);
     }
 
 
@@ -44,7 +43,11 @@ void abspath(const char *path) {
         const ssize_t len = readlink(resolved_path, symlink_target, MAX_PATH_BUFFER_SIZE - 1);
         if (len != -1) {
             symlink_target[len] = '\0';
-            if (symlink_target[0] == '/') { strcpy(resolved_path, symlink_target); } else { exit(-2); }
+            if (symlink_target[0] == '/') {
+                snprintf(resolved_path, sizeof(resolved_path), "%s", symlink_target);
+            } else {
+                exit(-2);
+            }
         }
 
         if (stat(resolved_path, &path_stat) == -1) {
