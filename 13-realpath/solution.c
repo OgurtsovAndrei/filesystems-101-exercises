@@ -25,7 +25,6 @@ void abspath(const char *path) {
         snprintf(initial_path, sizeof(initial_path), "%s", path);
     }
 
-
     while (path_to_resolve != NULL) {
         char current_segment[MAX_PATH_BUFFER_SIZE];
         char *next = strchr(path_to_resolve + 1, '/');
@@ -37,8 +36,7 @@ void abspath(const char *path) {
         }
         memcpy(current_segment, path_to_resolve, current_segment_size);
         current_segment[current_segment_size] = '\0';
-        strcat(resolved_path, current_segment);
-
+        snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "%s", current_segment);
 
         const ssize_t len = readlink(resolved_path, symlink_target, MAX_PATH_BUFFER_SIZE - 1);
         if (len != -1) {
@@ -56,7 +54,7 @@ void abspath(const char *path) {
         }
 
         if (S_ISDIR(path_stat.st_mode) && resolved_path[strlen(resolved_path) - 1] != '/') {
-            strcat(resolved_path, "/");
+            snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "/");
         }
 
         path_to_resolve = next;
