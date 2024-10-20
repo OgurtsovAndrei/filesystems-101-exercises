@@ -76,6 +76,7 @@ void abspath(const char *path) {
                 snprintf(path_to_resolve, MAX_PATH_BUFFER_SIZE, "%s", path_to_resolve_tmp);
                 resolved_path[0] = '\0';
                 free(path_to_resolve_tmp);
+                continue;
             }
         }
 
