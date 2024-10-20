@@ -81,10 +81,20 @@ void abspath(const char *path) {
                 snprintf(path_to_resolve, MAX_PATH_BUFFER_SIZE, "%s", path_to_resolve_tmp);
                 resolved_path[0] = '\0';
                 free(path_to_resolve_tmp);
+                continue;
             }
         }
 
         if (stat(resolved_path, &path_stat) == -1) {
+            if (resolved_path[0] != '\0') {
+                if (*(resolved_path + strlen(resolved_path) - 1) == '/') {
+                    *(resolved_path + strlen(resolved_path) - 1) = '\0';
+                }
+                char *last_slash = strrchr(resolved_path, '/');
+                if (last_slash != NULL) {
+                    *last_slash = '\0';
+                }
+            }
             report_error(resolved_path, path_to_resolve, errno);
             goto cleanup;
         }
