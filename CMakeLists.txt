@@ -15,7 +15,7 @@ add_compile_options(-fsanitize=address -fsanitize=undefined)
 add_link_options(-fsanitize=address -fsanitize=undefined)
 
 
-include_directories(00-ps)
+#include_directories(00-ps)
 add_executable(00
         00-ps/callbacks.c
         00-ps/main.c
