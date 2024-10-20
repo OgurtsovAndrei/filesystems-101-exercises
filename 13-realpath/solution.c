@@ -95,7 +95,8 @@ void abspath(const char *path) {
                     *(last_slash + 1) = '\0';
                 }
             }
-            if (*(current_segment + strlen(current_segment)) == '/') { *(current_segment + strlen(current_segment)) = '\0'; }
+            if (*(current_segment + strlen(current_segment) - 1) == '/') { *(current_segment + strlen(current_segment) - 1) = '\0'; }
+
             report_error(resolved_path, current_segment + 1, errno);
             goto cleanup;
         }
