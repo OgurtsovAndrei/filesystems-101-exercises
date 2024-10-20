@@ -92,7 +92,7 @@ void abspath(const char *path) {
                 }
                 char *last_slash = strrchr(resolved_path, '/');
                 if (last_slash != NULL) {
-                    *last_slash = '\0';
+                    *(last_slash + 1) = '\0';
                 }
             }
             if (*(current_segment + strlen(current_segment)) == '/') { *(current_segment + strlen(current_segment)) = '\0'; }
