@@ -57,10 +57,10 @@ void abspath(const char *path) {
         }
 
         if (resolved_path[0] != '\0' && resolved_path[strlen(resolved_path) - 1] == '/' && current_segment[0] == '/') {
-            snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "%s",
+            snprintf(resolved_path + strlen(resolved_path), MAX_PATH_BUFFER_SIZE - strlen(resolved_path), "%s",
                      current_segment + 1);
         } else {
-            snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "%s",
+            snprintf(resolved_path + strlen(resolved_path), MAX_PATH_BUFFER_SIZE - strlen(resolved_path), "%s",
                      current_segment);
         }
 
