@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#define INITIAL_BUFFER_SIZE 512
 #define MAX_PATH_BUFFER_SIZE 4096
 
 void abspath(const char *path) {
@@ -36,7 +35,23 @@ void abspath(const char *path) {
         }
         memcpy(current_segment, path_to_resolve, current_segment_size);
         current_segment[current_segment_size] = '\0';
-        snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "%s", current_segment);
+        // printf("%s\n", current_segment);
+        if (strcmp(current_segment, "/.") == 0) goto next;
+        if (strcmp(current_segment, "/..") == 0) {
+            if (*(resolved_path + strlen(resolved_path) - 1) == '/') *(resolved_path + strlen(resolved_path) - 1) = '\0';
+            char *last_slash = strrchr(resolved_path, '/');
+            if (last_slash != NULL) {
+                *last_slash = '\0';
+            }
+            // printf("path now %s\n", resolved_path);
+            goto next;
+        }
+
+        if (resolved_path[0] != '\0' && resolved_path[strlen(resolved_path) - 1] == '/' && current_segment[0] == '/') {
+            snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "%s", current_segment + 1);
+        } else {
+            snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "%s", current_segment);
+        }
 
         const ssize_t len = readlink(resolved_path, symlink_target, MAX_PATH_BUFFER_SIZE - 1);
         if (len != -1) {
@@ -57,6 +72,7 @@ void abspath(const char *path) {
             snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "/");
         }
 
+    next:
         path_to_resolve = next;
     }
 
