@@ -81,7 +81,7 @@ void ps(void) {
                         start++;
                     }
                 }
-                if (arg_index == 1024) { exit(-3); }
+                if (arg_index == 1023) { exit(-3); }
             }
             argv[arg_index] = NULL;
 
@@ -119,7 +119,7 @@ void ps(void) {
                     start += strlen(start) + 1;
                     envc++;
                 }
-                if (envc == 1024) { exit(-3); }
+                if (envc == 1023) { exit(-3); }
             }
             envp[envc] = NULL;
 
