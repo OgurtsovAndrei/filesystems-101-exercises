@@ -86,7 +86,8 @@ void abspath(const char *path) {
         path_to_resolve = next;
     }
 
-cleanup:
     report_path(resolved_path);
+
+cleanup:
     free(resolved_path);
 }
