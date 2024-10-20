@@ -74,6 +74,7 @@ void abspath(const char *path) {
                 if (path_to_resolve_tmp == NULL) { exit(2); }
                 snprintf(path_to_resolve_tmp, 2 * MAX_PATH_BUFFER_SIZE + 1, "/%s/%s", symlink_target, path_to_resolve);
                 snprintf(path_to_resolve, MAX_PATH_BUFFER_SIZE, "%s", path_to_resolve_tmp);
+                report_path(path_to_resolve);
                 resolved_path[0] = '\0';
                 free(path_to_resolve_tmp);
             }
