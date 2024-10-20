@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define INITIAL_CMD_BUFFER_SIZE 4096
+#define INITIAL_BUFFER_SIZE 4096
 
 void ps(void) {
     struct dirent *entry;
@@ -24,10 +24,11 @@ void ps(void) {
             char *cmd_buffer = NULL, *env_buffer = NULL;
             char exe_path[512], env_path[512], cmd_path[512];
             char exe_buffer[4096];
-            char *argv[1024], *envp[256];
+            char *argv[1024], *envp[1024];
             size_t arg_index = 0;
             size_t envc = 0;
-            size_t cmd_buffer_size = INITIAL_CMD_BUFFER_SIZE;
+            size_t cmd_buffer_size = INITIAL_BUFFER_SIZE;
+            size_t env_buffer_size = INITIAL_BUFFER_SIZE;
 
             snprintf(exe_path, sizeof(exe_path), "/proc/%s/exe", entry->d_name);
             ssize_t exe_len = readlink(exe_path, exe_buffer, sizeof(exe_buffer) - 1);
@@ -44,7 +45,7 @@ void ps(void) {
                 continue;
             }
 
-            cmd_buffer = (char *)malloc(cmd_buffer_size);
+            cmd_buffer = (char *) malloc(cmd_buffer_size);
             if (cmd_buffer == NULL) {
                 fclose(cmdline_file);
                 continue;
@@ -80,6 +81,7 @@ void ps(void) {
                         start++;
                     }
                 }
+                if (arg_index == 1024) { exit(-3); }
             }
             argv[arg_index] = NULL;
 
@@ -87,23 +89,37 @@ void ps(void) {
             environ_file = fopen(env_path, "r");
             if (environ_file == NULL) { goto cleanup; }
 
-            env_buffer = (char *)malloc(8192);
+            env_buffer = (char *) malloc(env_buffer_size);
             if (env_buffer == NULL) {
                 fclose(environ_file);
                 goto cleanup;
             }
 
-            read_bytes = fread(env_buffer, sizeof(char), 8192, environ_file);
+            read_bytes = 0;
+            total_read_bytes = 0;
+            while ((read_bytes = fread(env_buffer + total_read_bytes, 1, env_buffer_size - total_read_bytes,
+                                       environ_file)) > 0) {
+                total_read_bytes += read_bytes;
+                if (total_read_bytes == env_buffer_size) {
+                    env_buffer_size *= 2;
+                    env_buffer = (char *) realloc(env_buffer, env_buffer_size);
+                    if (env_buffer == NULL) {
+                        fclose(environ_file);
+                        goto cleanup;
+                    }
+                }
+            }
             fclose(environ_file);
 
-            if (read_bytes > 0) {
+            if (total_read_bytes > 0) {
                 char *start = env_buffer;
-                while (envc < 255 && start < env_buffer + read_bytes) {
+                while (envc < 1023 && start < env_buffer + total_read_bytes) {
                     envp[envc] = strdup(start);
                     if (envp[envc] == NULL) { break; }
                     start += strlen(start) + 1;
                     envc++;
                 }
+                if (envc == 1024) { exit(-3); }
             }
             envp[envc] = NULL;
 
