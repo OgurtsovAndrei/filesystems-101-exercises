@@ -82,6 +82,7 @@ void abspath(const char *path) {
 
         if (stat(resolved_path, &path_stat) == -1) {
             report_error(resolved_path, path_to_resolve, errno);
+            report_path(resolved_path);
             goto cleanup;
         }
 
