@@ -22,7 +22,6 @@ add_executable(00
         00-ps/solution.c
         00-ps/solution.h)
 
-include_directories(01-lsof)
 add_executable(01
         01-lsof/callbacks.c
         01-lsof/main.c
@@ -35,7 +34,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(FUSE3 REQUIRED fuse3 )
 include_directories(${FUSE3_INCLUDE_DIRS})
 
-include_directories(02-fuse-helloworld)
+#include_directories(02-fuse-helloworld)
 add_executable(02
 #        02-fuse-helloworld/solution1
         02-fuse-helloworld/solution.c
@@ -43,3 +42,17 @@ add_executable(02
         02-fuse-helloworld/main.c
 )
 target_link_libraries(02 ${FUSE3_LIBRARIES})
+
+
+include_directories(13-realpath)
+add_executable(13
+        13-realpath/callbacks.c
+        13-realpath/main.c
+        13-realpath/solution.c
+        13-realpath/solution.h)
+#
+#add_custom_target(13-with-path
+#        COMMAND 13 /usr/bin/cat
+#        DEPENDS 13
+#        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+#)
