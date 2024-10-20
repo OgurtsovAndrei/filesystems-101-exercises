@@ -36,15 +36,22 @@ void abspath(const char *path) {
         memcpy(current_segment, path_to_resolve, current_segment_size);
         current_segment[current_segment_size] = '\0';
         // printf("%s\n", current_segment);
-        if (strcmp(current_segment, "/.") == 0) goto next;
+        if (strcmp(current_segment, "/.") == 0) {
+            path_to_resolve = next;
+            continue;
+        }
         if (strcmp(current_segment, "/..") == 0) {
-            if (*(resolved_path + strlen(resolved_path) - 1) == '/') *(resolved_path + strlen(resolved_path) - 1) = '\0';
-            char *last_slash = strrchr(resolved_path, '/');
-            if (last_slash != NULL) {
-                *last_slash = '\0';
+            if (resolved_path[0] != '\0') {
+                if (*(resolved_path + strlen(resolved_path) - 1) == '/') {
+                    *(resolved_path + strlen(resolved_path) - 1) = '\0';
+                }
+                char *last_slash = strrchr(resolved_path, '/');
+                if (last_slash != NULL) {
+                    *last_slash = '\0';
+                }
             }
-            // printf("path now %s\n", resolved_path);
-            goto next;
+            path_to_resolve = next;
+            continue;
         }
 
         if (resolved_path[0] != '\0' && resolved_path[strlen(resolved_path) - 1] == '/' && current_segment[0] == '/') {
@@ -72,7 +79,6 @@ void abspath(const char *path) {
             snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "/");
         }
 
-    next:
         path_to_resolve = next;
     }
 
