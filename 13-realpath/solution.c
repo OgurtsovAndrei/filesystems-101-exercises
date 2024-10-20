@@ -95,7 +95,7 @@ void abspath(const char *path) {
                     *last_slash = '\0';
                 }
             }
-            report_error(resolved_path, path_to_resolve, errno);
+            report_error(resolved_path, current_segment, errno);
             goto cleanup;
         }
 
