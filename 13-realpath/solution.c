@@ -66,7 +66,7 @@ void abspath(const char *path) {
             if (symlink_target[0] == '/') {
                 snprintf(resolved_path, sizeof(resolved_path), "%s", symlink_target);
             } else {
-                exit(-2);
+                snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "/%s", symlink_target);
             }
         }
 
