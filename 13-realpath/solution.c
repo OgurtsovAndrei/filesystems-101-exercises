@@ -10,7 +10,9 @@
 #define MAX_PATH_BUFFER_SIZE 4096
 
 void abspath(const char *path) {
-    char resolved_path[MAX_PATH_BUFFER_SIZE];
+    char *resolved_path = malloc(MAX_PATH_BUFFER_SIZE);
+    if (resolved_path == NULL) { exit(2); }
+
     char symlink_target[MAX_PATH_BUFFER_SIZE];
     char initial_path[MAX_PATH_BUFFER_SIZE];
     char *path_to_resolve = initial_path;
@@ -55,24 +57,26 @@ void abspath(const char *path) {
         }
 
         if (resolved_path[0] != '\0' && resolved_path[strlen(resolved_path) - 1] == '/' && current_segment[0] == '/') {
-            snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "%s", current_segment + 1);
+            snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "%s",
+                     current_segment + 1);
         } else {
-            snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "%s", current_segment);
+            snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "%s",
+                     current_segment);
         }
 
         const ssize_t len = readlink(resolved_path, symlink_target, MAX_PATH_BUFFER_SIZE - 1);
         if (len != -1) {
             symlink_target[len] = '\0';
             if (symlink_target[0] == '/') {
-                snprintf(resolved_path, sizeof(resolved_path), "%s", symlink_target);
+                snprintf(resolved_path, MAX_PATH_BUFFER_SIZE, "%s", symlink_target);
             } else {
-                snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "/%s", symlink_target);
+                snprintf(resolved_path + strlen(resolved_path), MAX_PATH_BUFFER_SIZE - strlen(resolved_path), "/%s", symlink_target);
             }
         }
 
         if (stat(resolved_path, &path_stat) == -1) {
             report_error(resolved_path, path_to_resolve, errno);
-            return;
+            goto cleanup;
         }
 
         if (S_ISDIR(path_stat.st_mode) && resolved_path[strlen(resolved_path) - 1] != '/') {
@@ -83,4 +87,7 @@ void abspath(const char *path) {
     }
 
     report_path(resolved_path);
+
+cleanup:
+    free(resolved_path);
 }
