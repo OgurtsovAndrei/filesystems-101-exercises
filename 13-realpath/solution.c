@@ -70,8 +70,11 @@ void abspath(const char *path) {
             if (symlink_target[0] == '/') {
                 snprintf(resolved_path, MAX_PATH_BUFFER_SIZE, "%s", symlink_target);
             } else {
-                snprintf(resolved_path, MAX_PATH_BUFFER_SIZE - strlen(resolved_path), "/%s", symlink_target);
-                // snprintf(resolved_path + strlen(resolved_path), MAX_PATH_BUFFER_SIZE - strlen(resolved_path), "/%s", symlink_target);
+                char *path_to_resolve_tmp = malloc(2 * MAX_PATH_BUFFER_SIZE + 1);
+                if (path_to_resolve_tmp == NULL) { exit(2); }
+                snprintf(path_to_resolve_tmp, 2 * MAX_PATH_BUFFER_SIZE + 1, "%s/%s", symlink_target, path_to_resolve);
+                snprintf(path_to_resolve, MAX_PATH_BUFFER_SIZE, "%s", path_to_resolve_tmp);
+                free(path_to_resolve_tmp);
             }
         }
 
