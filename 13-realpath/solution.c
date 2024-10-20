@@ -97,10 +97,20 @@ void abspath(const char *path) {
             }
 
             if (*(current_segment + strlen(current_segment) - 1) == '/') { *(current_segment + strlen(current_segment) - 1) = '\0'; }
+
             if (errno == ENOTDIR) {
-                size_t current_segment_len = strlen(current_segment);
-                current_segment[current_segment_len] = '/';
-                current_segment[current_segment_len + 1] = '\0';
+                if (resolved_path[0] != '\0') {
+                    if (*(resolved_path + strlen(resolved_path) - 1) == '/') {
+                        *(resolved_path + strlen(resolved_path) - 1) = '\0';
+                    }
+                    char *last_slash = strrchr(resolved_path, '/');
+                    if (last_slash != NULL) {
+                        snprintf(current_segment, MAX_PATH_BUFFER_SIZE, "%s", last_slash);
+
+                        *(last_slash + 1) = '\0';
+                    }
+                }
+
             }
 
             report_error(resolved_path, current_segment + 1, errno);
