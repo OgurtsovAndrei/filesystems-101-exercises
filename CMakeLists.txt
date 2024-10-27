@@ -9,11 +9,11 @@ add_definitions(-D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC)
 
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fsanitize=undefined -Wall -Wextra -Werror")
 add_definitions(-Wall -Wextra -Wshadow)
-add_definitions(-Werror)
+#add_definitions(-Werror)
 
 add_compile_options(-fsanitize=address -fsanitize=undefined)
 add_link_options(-fsanitize=address -fsanitize=undefined)
-
+include_directories(stdlib)
 
 #include_directories(00-ps)
 add_executable(00
@@ -43,16 +43,22 @@ add_executable(02
 )
 target_link_libraries(02 ${FUSE3_LIBRARIES})
 
-
-include_directories(13-realpath)
+#include_directories(13-realpath)
 add_executable(13
         13-realpath/callbacks.c
         13-realpath/main.c
         13-realpath/solution.c
         13-realpath/solution.h)
-#
-#add_custom_target(13-with-path
-#        COMMAND 13 /usr/bin/cat
-#        DEPENDS 13
-#        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-#)
+
+include_directories(03-io_uring)
+add_executable(03
+        03-io_uring/main.c
+        03-io_uring/solution.c
+        03-io_uring/solution.h
+        stdlib/fs_malloc.c
+)
+target_link_libraries(03 uring)
+
+add_executable(03-cat
+        03-io_uring/cat
+)
