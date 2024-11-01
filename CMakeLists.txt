@@ -70,12 +70,18 @@ add_executable(14
         14-ext2-blkiter/solution.h
         14-ext2-blkiter/main.c
         14-ext2-blkiter/solution.h
+        14-ext2-blkiter/fs_inode.h
+        14-ext2-blkiter/fs_superblock.h
+        14-ext2-blkiter/fs_block_group_descriptor_table.h
         stdlib/fs_malloc.c
 )
 
 add_executable(14-read_bytes
         14-ext2-blkiter/read_bytes_ex.c
         14-ext2-blkiter/solution.h
+        14-ext2-blkiter/fs_inode.h
+        14-ext2-blkiter/fs_superblock.h
+        14-ext2-blkiter/fs_block_group_descriptor_table.h
         stdlib/fs_malloc.c
 )
 
