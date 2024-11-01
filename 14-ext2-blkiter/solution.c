@@ -10,14 +10,8 @@
 
 
 int init_superblock(int fd, fs_superblock *superblock) {
-    if (lseek(fd, 1024, SEEK_SET) == -1)
-        return -1;
-
-    if (read(fd, superblock, sizeof(fs_superblock)) != sizeof(fs_superblock))
-        return -EPROTO;
-
+    if (pread(fd, superblock, sizeof(fs_superblock), 1024) != sizeof(fs_superblock)) return -EPROTO;
     if (superblock->s_magic != 0xEF53) return -EPROTO;
-
     return 0;
 }
 
@@ -25,15 +19,14 @@ int init_blockgroup_descriptor(int fd, fs_superblock *superblock, fs_blockgroup_
     __off64_t begining_of_blockgroup_descriptor;
     if (superblock->s_log_block_size_kbytes == 0) begining_of_blockgroup_descriptor = (1 << 11);
     else begining_of_blockgroup_descriptor = 1 << (10 + superblock->s_log_block_size_kbytes);
-
-    if (lseek(fd, begining_of_blockgroup_descriptor, SEEK_SET) == -1)
-        return -1;
-
-    if (read(fd, blockgroup_descriptor, sizeof(fs_blockgroup_descriptor)) != sizeof(fs_blockgroup_descriptor))
+    if (pread(fd, blockgroup_descriptor, sizeof(fs_blockgroup_descriptor), begining_of_blockgroup_descriptor)
+        != sizeof(fs_blockgroup_descriptor)) {
         return -EPROTO;
+    }
 
     return 0;
 }
+
 
 struct ext2_fs {
     fs_superblock *superblock;

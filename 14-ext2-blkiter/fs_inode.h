@@ -54,23 +54,25 @@ int init_inode(int fd, fs_superblock *superblock, fs_blockgroup_descriptor *bloc
     __off64_t block_size = 1 << (10 + superblock->s_log_block_size_kbytes);
     __off64_t inode_block_offset = inode_number * inode_size + blockgroup_descriptor->address_of_inode_table *
                                    block_size;
-    // printf("%ld\n", inode_block_offset);
-    if (lseek(fd, inode_block_offset, SEEK_SET) == -1) return -EPROTO;
+
     fs_inode *inode = fs_xmalloc(inode_size);
     int ret;
-    if (read(fd, inode, inode_size) != inode_size) {
+
+    // Use pread to read inode data at a specific offset
+    if (pread(fd, inode, inode_size, inode_block_offset) != inode_size) {
         ret = -EPROTO;
-        goto clenup_inode;
+        goto cleanup_inode;
     }
+
     if (inode->hard_link_count == 0) {
         ret = -ENOENT;
-        goto clenup_inode;
+        goto cleanup_inode;
     }
 
     *inode_ptr = inode;
     return 0;
 
-clenup_inode:
+cleanup_inode:
     free(inode);
     return ret;
 }
@@ -86,38 +88,50 @@ int get_inode_block_address_by_index(int fd, fs_inode *inode, uint32_t block_siz
         block_address = inode->direct_block_pointers[block_index];
     } else if (block_index < (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE)) {
         uint32_t singly_offset = block_index - DIRECT_POINTERS;
-        if (lseek(fd, inode->singly_indirect_block * block_size + singly_offset * BLOCK_ADDRESS_SIZE, SEEK_SET) == -1)
-            return -errno;
-        if (read(fd, &block_address, BLOCK_ADDRESS_SIZE) != BLOCK_ADDRESS_SIZE) return -EIO;
-    } else if (block_index < (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE + (block_size / BLOCK_ADDRESS_SIZE) * (
-                                  block_size / BLOCK_ADDRESS_SIZE))) {
+        uint32_t indirect_block_offset = inode->singly_indirect_block * block_size + singly_offset * BLOCK_ADDRESS_SIZE;
+
+        if (pread(fd, &block_address, BLOCK_ADDRESS_SIZE, indirect_block_offset) != BLOCK_ADDRESS_SIZE) {
+            return -EIO;
+        }
+    } else if (block_index < (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE + (block_size / BLOCK_ADDRESS_SIZE) *
+                              (block_size / BLOCK_ADDRESS_SIZE))) {
         uint32_t doubly_offset = block_index - (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE);
         uint32_t singly_index = doubly_offset / (block_size / BLOCK_ADDRESS_SIZE);
         uint32_t indirect_index = doubly_offset % (block_size / BLOCK_ADDRESS_SIZE);
 
-        if (lseek(fd, inode->doubly_indirect_block * block_size + singly_index * BLOCK_ADDRESS_SIZE, SEEK_SET) == -1)
-            return -errno;
-        if (read(fd, &block_address, BLOCK_ADDRESS_SIZE) != BLOCK_ADDRESS_SIZE) return -EIO;
+        uint32_t indirect_block_offset = inode->doubly_indirect_block * block_size + singly_index * BLOCK_ADDRESS_SIZE;
 
-        if (lseek(fd, block_address * block_size + indirect_index * BLOCK_ADDRESS_SIZE, SEEK_SET) == -1) return -errno;
-        if (read(fd, &block_address, BLOCK_ADDRESS_SIZE) != BLOCK_ADDRESS_SIZE) return -EIO;
+        if (pread(fd, &block_address, BLOCK_ADDRESS_SIZE, indirect_block_offset) != BLOCK_ADDRESS_SIZE) {
+            return -EIO;
+        }
+
+        if (pread(fd, &block_address, BLOCK_ADDRESS_SIZE,
+                  block_address * block_size + indirect_index * BLOCK_ADDRESS_SIZE) != BLOCK_ADDRESS_SIZE) {
+            return -EIO;
+        }
     } else {
-        uint32_t triply_offset =
-                block_index - (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE + (block_size / BLOCK_ADDRESS_SIZE) * (
-                                   block_size / BLOCK_ADDRESS_SIZE));
+        uint32_t triply_offset = block_index - (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE +
+                                                (block_size / BLOCK_ADDRESS_SIZE) * (block_size / BLOCK_ADDRESS_SIZE));
         uint32_t doubly_index = triply_offset / ((block_size / BLOCK_ADDRESS_SIZE) * (block_size / BLOCK_ADDRESS_SIZE));
         uint32_t singly_index = (triply_offset / (block_size / BLOCK_ADDRESS_SIZE)) % (block_size / BLOCK_ADDRESS_SIZE);
         uint32_t indirect_index = triply_offset % (block_size / BLOCK_ADDRESS_SIZE);
 
-        if (lseek(fd, inode->triply_indirect_block * block_size + doubly_index * BLOCK_ADDRESS_SIZE, SEEK_SET) == -1)
-            return -errno;
-        if (read(fd, &block_address, BLOCK_ADDRESS_SIZE) != BLOCK_ADDRESS_SIZE) return -EIO;
+        uint32_t indirect_block_offset = inode->triply_indirect_block * block_size + doubly_index * BLOCK_ADDRESS_SIZE;
 
-        if (lseek(fd, block_address * block_size + singly_index * BLOCK_ADDRESS_SIZE, SEEK_SET) == -1) return -errno;
-        if (read(fd, &block_address, BLOCK_ADDRESS_SIZE) != BLOCK_ADDRESS_SIZE) return -EIO;
+        if (pread(fd, &block_address, BLOCK_ADDRESS_SIZE, indirect_block_offset) != BLOCK_ADDRESS_SIZE) {
+            return -EIO;
+        }
 
-        if (lseek(fd, block_address * block_size + indirect_index * BLOCK_ADDRESS_SIZE, SEEK_SET) == -1) return -errno;
-        if (read(fd, &block_address, BLOCK_ADDRESS_SIZE) != BLOCK_ADDRESS_SIZE) return -EIO;
+        // Read address from doubly indirect block
+        if (pread(fd, &block_address, BLOCK_ADDRESS_SIZE,
+                  block_address * block_size + singly_index * BLOCK_ADDRESS_SIZE) != BLOCK_ADDRESS_SIZE) {
+            return -EIO;
+        }
+
+        if (pread(fd, &block_address, BLOCK_ADDRESS_SIZE,
+                  block_address * block_size + indirect_index * BLOCK_ADDRESS_SIZE) != BLOCK_ADDRESS_SIZE) {
+            return -EIO;
+        }
     }
 
     *block_address_ptr = block_address;
@@ -128,8 +142,7 @@ int read_inode_block(int fd, fs_inode *inode, uint32_t block_size, uint32_t bloc
     uint32_t block_address;
     int ret = get_inode_block_address_by_index(fd, inode, block_size, block_index, &block_address);
     if (ret != 0) return ret;
-    if (lseek(fd, block_address * block_size, SEEK_SET) == -1) return -errno;
-    if (read(fd, buffer, block_size) != block_size) return -EIO;
+    if (pread(fd, buffer, block_size, block_address * block_size) != block_size) return -EIO;
     return 0;
 }
 
