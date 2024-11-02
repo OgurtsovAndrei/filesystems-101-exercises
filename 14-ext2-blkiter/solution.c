@@ -73,10 +73,12 @@ clenup:
 }
 
 void ext2_fs_free(struct ext2_fs *fs) {
+    if (fs == NULL) return;
     fs_superblock *superblock = fs->superblock;
     fs_blockgroup_descriptor *blockgroup_descriptor = fs->blockgroup_descriptor;
     free(superblock);
     free(blockgroup_descriptor);
+    close(fs->fd);
     free(fs);
 }
 
@@ -94,7 +96,6 @@ int ext2_blkiter_init(struct ext2_blkiter **i, struct ext2_fs *fs, int ino) {
     return 0;
 
 cleenup:
-    free(blkiter->inode);
     free(blkiter);
     return ret;
 }
@@ -118,6 +119,7 @@ int ext2_blkiter_next(struct ext2_blkiter *i, int *blkno) {
 }
 
 void ext2_blkiter_free(struct ext2_blkiter *i) {
+    if (i == NULL) return;
     free(i->inode);
     free(i);
 }

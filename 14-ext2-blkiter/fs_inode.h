@@ -52,17 +52,17 @@ int init_inode(int fd, fs_superblock *superblock, fs_blockgroup_descriptor *bloc
 
     uint16_t inode_size = superblock->s_inode_size;
     __off64_t block_size = 1 << (10 + superblock->s_log_block_size_kbytes);
-    __off64_t inode_block_offset = inode_number * inode_size + blockgroup_descriptor->address_of_inode_table *
+    __off64_t inode_block_offset = (inode_number - 1) * inode_size + blockgroup_descriptor->address_of_inode_table *
                                    block_size;
 
     fs_inode *inode = fs_xmalloc(inode_size);
     int ret;
 
-    // Use pread to read inode data at a specific offset
     if (pread(fd, inode, inode_size, inode_block_offset) != inode_size) {
         ret = -EPROTO;
         goto cleanup_inode;
     }
+    // printf("inode file size: %ud\n", inode->size_lower);
 
     if (inode->hard_link_count == 0) {
         ret = -ENOENT;
