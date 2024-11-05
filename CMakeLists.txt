@@ -66,8 +66,6 @@ target_link_libraries(03 uring)
 
 add_executable(14
         14-ext2-blkiter/main.c
-        14-ext2-blkiter/solution.c
-        14-ext2-blkiter/solution.h
         stdlib/fs_malloc.c
         stdlib/fs_block_group_descriptor_table.c
         stdlib/fs_block_group_descriptor_table.h
@@ -81,7 +79,6 @@ add_executable(14
 
 add_executable(14-read_bytes
         14-ext2-blkiter/read_bytes_exc.
-        14-ext2-blkiter/solution.h
         stdlib/fs_malloc.c
         stdlib/fs_block_group_descriptor_table.c
         stdlib/fs_block_group_descriptor_table.h

@@ -1,5 +1,6 @@
 #pragma once
 #include "fs_inode.h"
+#include <stdint.h>
 
 struct ext2_fs {
     fs_superblock *superblock;
@@ -8,8 +9,8 @@ struct ext2_fs {
 
 struct ext2_blkiter {
     int fd;
-    u_int32_t iterator_block_index;
-    u_int32_t block_size;
+    uint32_t iterator_block_index;
+    uint32_t block_size;
     fs_inode *inode;
     fs_blockgroup_descriptor *blockgroup_descriptor;
     int64_t single_indirect_block_cache_id;
