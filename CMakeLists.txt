@@ -75,10 +75,12 @@ add_executable(14
         stdlib/fs_inode.h
         stdlib/fs_superblock.c
         stdlib/fs_superblock.h
+        stdlib/fs_ext2.c
+        stdlib/fs_ext2.h
 )
 
 add_executable(14-read_bytes
-        14-ext2-blkiter/read_bytes_ex.c
+        14-ext2-blkiter/read_bytes_exc.
         14-ext2-blkiter/solution.h
         stdlib/fs_malloc.c
         stdlib/fs_block_group_descriptor_table.c

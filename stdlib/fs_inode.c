@@ -48,7 +48,7 @@ cleanup_inode:
 int get_inode_block_address_by_index(int fd, fs_inode *inode, uint32_t block_size, uint32_t block_index,
                                      uint32_t *block_address_ptr) {
     uint32_t used_blocks = (inode->size_lower + block_size - 1) / block_size;
-    if (block_index > used_blocks) return -ERANGE;
+    if (block_index >= used_blocks) return -ERANGE;
 
     uint32_t block_address;
 
