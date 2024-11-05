@@ -9,7 +9,7 @@ add_definitions(-D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC)
 
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fsanitize=undefined -Wall -Wextra -Werror")
 add_definitions(-Wall -Wextra -Wshadow)
-#add_definitions(-Werror)
+add_definitions(-Werror)
 
 add_compile_options(-fsanitize=address -fsanitize=undefined)
 add_link_options(-fsanitize=address -fsanitize=undefined)
@@ -68,21 +68,41 @@ add_executable(14
         14-ext2-blkiter/main.c
         14-ext2-blkiter/solution.c
         14-ext2-blkiter/solution.h
-        14-ext2-blkiter/main.c
-        14-ext2-blkiter/solution.h
-        14-ext2-blkiter/fs_inode.h
-        14-ext2-blkiter/fs_superblock.h
-        14-ext2-blkiter/fs_block_group_descriptor_table.h
         stdlib/fs_malloc.c
+        stdlib/fs_block_group_descriptor_table.c
+        stdlib/fs_block_group_descriptor_table.h
+        stdlib/fs_inode.c
+        stdlib/fs_inode.h
+        stdlib/fs_superblock.c
+        stdlib/fs_superblock.h
 )
 
 add_executable(14-read_bytes
         14-ext2-blkiter/read_bytes_ex.c
         14-ext2-blkiter/solution.h
-        14-ext2-blkiter/fs_inode.h
-        14-ext2-blkiter/fs_superblock.h
-        14-ext2-blkiter/fs_block_group_descriptor_table.h
         stdlib/fs_malloc.c
+        stdlib/fs_block_group_descriptor_table.c
+        stdlib/fs_block_group_descriptor_table.h
+        stdlib/fs_inode.c
+        stdlib/fs_inode.h
+        stdlib/fs_superblock.c
+        stdlib/fs_superblock.h
+)
+
+
+add_executable(04
+        04-ext2-read-file/main.c
+        04-ext2-read-file/solution.c
+        04-ext2-read-file/solution.h
+        stdlib/fs_malloc.c
+        stdlib/fs_block_group_descriptor_table.c
+        stdlib/fs_block_group_descriptor_table.h
+        stdlib/fs_inode.c
+        stdlib/fs_inode.h
+        stdlib/fs_superblock.c
+        stdlib/fs_superblock.h
+        stdlib/fs_ext2.c
+        stdlib/fs_ext2.h
 )
 
 # curl -s -X POST http://185.106.102.104:9091/submit/OgurtsovAndrei/03-io_uring

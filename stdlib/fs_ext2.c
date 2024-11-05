@@ -1,25 +1,10 @@
-#include "solution.h"
 #include "fs_malloc.h"
+#include "fs_ext2.h"
 #include "fs_inode.h"
 #include "fs_superblock.h"
 #include "fs_block_group_descriptor_table.h"
-#include <errno.h>
-#include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
-
-struct ext2_fs {
-    fs_superblock *superblock;
-    fs_blockgroup_descriptor *blockgroup_descriptor;
-    int fd;
-};
-
-struct ext2_blkiter {
-    fs_inode *inode;
-    u_int32_t iterator_block_index;
-    int fd;
-    u_int32_t block_size;
-};
 
 int ext2_fs_init(struct ext2_fs **fs, int fd) {
     int ret;
@@ -84,17 +69,11 @@ int ext2_blkiter_next(struct ext2_blkiter *i, int *blkno) {
 
     int ret = get_inode_block_address_by_index(i->fd, i->inode, i->block_size, i->iterator_block_index++,
                                                &block_number);
-    // printf("%i\n", block_number);
-    if (ret == 1) {
-        // printf("Stop!");
-        return 0;
-    }
     if (ret < 0) {
-        // printf("Stop!");
         return ret;
     };
     *blkno = (int) block_number;
-    return 1;
+    return ret;
 }
 
 void ext2_blkiter_free(struct ext2_blkiter *i) {
