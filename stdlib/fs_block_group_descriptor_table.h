@@ -18,6 +18,7 @@ typedef struct {
     uint16_t unallocated_blocks_counts; // Number of unallocated blocks in group
     uint16_t unallocated_inodes_counts; // Number of unallocated inodes in group
     uint16_t directories_in_group_count; // Number of directories in group
+    uint8_t unused[14];
 } fs_blockgroup_descriptor;
 
 #pragma pack(pop)
