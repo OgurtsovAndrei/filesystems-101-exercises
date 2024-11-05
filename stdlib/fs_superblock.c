@@ -9,7 +9,7 @@
 #include <asm-generic/errno.h>
 
 int init_superblock(int fd, fs_superblock *superblock) {
-    if (pread(fd, superblock, sizeof(fs_superblock), 1024) != sizeof(fs_superblock)) return -EPROTO;
+    if (pread(fd, superblock, sizeof(fs_superblock), SUPERBLOCK_OFFSET) != sizeof(fs_superblock)) return -EPROTO;
     if (superblock->s_magic != 0xEF53) return -EPROTO;
     return 0;
 }

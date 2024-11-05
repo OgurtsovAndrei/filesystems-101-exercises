@@ -49,10 +49,9 @@ typedef struct {
 int init_inode(int fd, fs_superblock *superblock, fs_blockgroup_descriptor *blockgroup_descriptor, int inode_number,
                fs_inode **inode_ptr);
 
-int get_inode_block_address_by_index(int fd, fs_inode *inode, uint32_t block_size, uint32_t block_index,
-                                     uint32_t *block_address_ptr);
-
-int read_inode_block(int fd, fs_inode *inode, uint32_t block_size, uint32_t block_index, char *buffer) ;
+int get_inode_block_address_by_index(int fd, fs_inode *inode, uint32_t block_size, uint32_t inode_index,
+                                     uint32_t *block_address_ptr, int64_t *single_indirect_cache_begin_id, int64_t *double_indirect_cache_begin_id, int64_t
+                                     *triple_indirect_cache_begin_id, char* cache);
 
 int read_block(int fd, uint32_t block_size, uint32_t block_address, char *buffer);
 

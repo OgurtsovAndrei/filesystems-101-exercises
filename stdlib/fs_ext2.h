@@ -3,15 +3,19 @@
 
 struct ext2_fs {
     fs_superblock *superblock;
-    fs_blockgroup_descriptor *blockgroup_descriptor;
     int fd;
 };
 
 struct ext2_blkiter {
-    fs_inode *inode;
-    u_int32_t iterator_block_index;
     int fd;
+    u_int32_t iterator_block_index;
     u_int32_t block_size;
+    fs_inode *inode;
+    fs_blockgroup_descriptor *blockgroup_descriptor;
+    int64_t single_indirect_block_cache_id;
+    int64_t double_indirect_block_cache_id;
+    int64_t triple_indirect_block_cache_id;
+    char indirect_pointer_cache[];
 };
 
 /**

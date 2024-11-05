@@ -20,11 +20,12 @@ void print_block_group_descriptor_info(const fs_blockgroup_descriptor *descripto
     printf("\n");
 }
 
-inline int init_blockgroup_descriptor(int fd, fs_superblock *superblock,
-                                      fs_blockgroup_descriptor *blockgroup_descriptor) {
+int init_blockgroup_descriptor(int fd, fs_superblock *superblock,
+                                      fs_blockgroup_descriptor *blockgroup_descriptor, uint32_t block_group_num) {
     __off64_t begining_of_blockgroup_descriptor;
     if (superblock->s_log_block_size_kbytes == 0) begining_of_blockgroup_descriptor = (1 << 11);
     else begining_of_blockgroup_descriptor = 1 << (10 + superblock->s_log_block_size_kbytes);
+    begining_of_blockgroup_descriptor += sizeof(fs_blockgroup_descriptor) * block_group_num;
     if (pread(fd, blockgroup_descriptor, sizeof(fs_blockgroup_descriptor), begining_of_blockgroup_descriptor)
         != sizeof(fs_blockgroup_descriptor)) {
         return -EPROTO;

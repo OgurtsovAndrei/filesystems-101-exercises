@@ -22,7 +22,7 @@ typedef struct {
 
 #pragma pack(pop)
 
-int init_blockgroup_descriptor(int fd, fs_superblock *superblock, fs_blockgroup_descriptor *blockgroup_descriptor);
+int init_blockgroup_descriptor(int fd, fs_superblock *superblock, fs_blockgroup_descriptor *blockgroup_descriptor, uint32_t group_offset);
 
 void print_block_group_descriptor_info(const fs_blockgroup_descriptor *descriptor);
 

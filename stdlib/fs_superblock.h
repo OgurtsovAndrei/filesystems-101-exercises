@@ -5,6 +5,7 @@
 #ifndef FS_SUPERBLOCK_H
 #define FS_SUPERBLOCK_H
 
+#define SUPERBLOCK_OFFSET 1024
 #include <stdint.h>
 
 #pragma pack(push, 1)
