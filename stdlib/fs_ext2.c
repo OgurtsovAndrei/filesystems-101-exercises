@@ -74,11 +74,10 @@ int ext2_blkiter_next(struct ext2_blkiter *i, int *blkno) {
                                                &i->double_indirect_block_cache_id,
                                                &i->triple_indirect_block_cache_id,
                                                i->indirect_pointer_cache);
-    if (ret < 0) {
-        return ret;
-    };
+    if (ret == -ERANGE) return 0;
+    if (ret < 0) { return ret; }
     *blkno = (int) block_number;
-    return ret;
+    return 1;
 }
 
 void ext2_blkiter_free(struct ext2_blkiter *i) {

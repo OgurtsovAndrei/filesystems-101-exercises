@@ -3,7 +3,7 @@
 # Assign arguments to variables for readability
 IMAGE_FILE="./../../NUP/FileSystems/ext2_large_image.img"
 START_INODE=10
-END_INODE=200
+END_INODE=20000
 NUM_THREADS=10
 
 # Function to extract and print individual blocks for an inode
