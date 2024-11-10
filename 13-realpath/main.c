@@ -1,6 +1,7 @@
-#include <solution.h>
 
 #include <stdio.h>
+
+#include "solution.h"
 
 int main(int argc, char **argv)
 {

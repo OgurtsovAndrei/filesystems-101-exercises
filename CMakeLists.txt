@@ -45,6 +45,20 @@ add_executable(13
         13-realpath/main.c
         13-realpath/solution.c
         13-realpath/solution.h
+
+        stdlib/fs_malloc.c
+        stdlib/fs_block_group_descriptor_table.c
+        stdlib/fs_block_group_descriptor_table.h
+        stdlib/fs_inode.c
+        stdlib/fs_inode.h
+        stdlib/fs_superblock.c
+        stdlib/fs_superblock.h
+        stdlib/fs_ext2.c
+        stdlib/fs_ext2.h
+        stdlib/fs_dir_entry.c
+        stdlib/fs_dir_entry.h
+        stdlib/fs_void_vector.c
+        stdlib/fs_void_vector.h
 )
 
 add_executable(03
@@ -67,6 +81,8 @@ add_executable(14
         stdlib/fs_superblock.h
         stdlib/fs_ext2.c
         stdlib/fs_ext2.h
+        stdlib/fs_void_vector.c
+        stdlib/fs_void_vector.h
 )
 
 add_executable(14-read_bytes
@@ -94,6 +110,8 @@ add_executable(04
         stdlib/fs_superblock.h
         stdlib/fs_ext2.c
         stdlib/fs_ext2.h
+        stdlib/fs_void_vector.c
+        stdlib/fs_void_vector.h
 )
 
 add_executable(05
@@ -112,6 +130,26 @@ add_executable(05
         stdlib/fs_ext2.h
         stdlib/fs_dir_entry.c
         stdlib/fs_dir_entry.h
+        stdlib/fs_void_vector.c
+        stdlib/fs_void_vector.h
+)
+add_executable(06
+        06-ext2-walk-path/solution.c
+        06-ext2-walk-path/main.c
+        06-ext2-walk-path/solution.h
+        stdlib/fs_malloc.c
+        stdlib/fs_block_group_descriptor_table.c
+        stdlib/fs_block_group_descriptor_table.h
+        stdlib/fs_inode.c
+        stdlib/fs_inode.h
+        stdlib/fs_superblock.c
+        stdlib/fs_superblock.h
+        stdlib/fs_ext2.c
+        stdlib/fs_ext2.h
+        stdlib/fs_dir_entry.c
+        stdlib/fs_dir_entry.h
+        stdlib/fs_void_vector.c
+        stdlib/fs_void_vector.h
 )
 
 # curl -s -X POST http://185.106.102.104:9091/submit/OgurtsovAndrei/03-io_uring

@@ -6,8 +6,12 @@
 #ifndef FS_DIR_ENTRY_H
 #define FS_DIR_ENTRY_H
 
+#include "fs_void_vector.h"
 #include <stdint.h>
 #include <unistd.h>
+
+#include "fs_ext2.h"
+
 
 #define	SKIP_ENTRY 1
 #define	FS_IS_FILE 1
@@ -34,11 +38,17 @@ int init_dir_entry_from_buffer(
     dir_entry **dir_entry_ptr
 );
 
+char* get_name(dir_entry *entry);
+
 void free_entry(dir_entry *entry);
 
 int is_file(dir_entry *entry);
 
 int is_dir(dir_entry *entry);
 
+int apply_on_entries(struct ext2_fs *file_system, struct ext2_blkiter *blkiter,
+                     void *context, int (*lambda)(void *context, dir_entry *entry));
+
+int dump_directory(struct ext2_fs *file_system, struct ext2_blkiter *blkiter, fs_vector *vector);
 
 #endif //FS_DIR_ENTRY_H

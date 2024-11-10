@@ -1,131 +1,151 @@
-#include <solution.h>
+#include "solution.h"
+#include "fs_void_vector.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <fs_malloc.h>
 #include <limits.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <sys/stat.h>
 
-#define MAX_PATH_BUFFER_SIZE 4096
-
-void abspath(const char *path) {
-    char *resolved_path = malloc(MAX_PATH_BUFFER_SIZE);
-    if (resolved_path == NULL) { exit(2); }
-
-    char symlink_target[MAX_PATH_BUFFER_SIZE];
+void parse_path_to_segments(const char *path, fs_vector *segments) {
     char initial_path[MAX_PATH_BUFFER_SIZE];
-    char *path_to_resolve = initial_path;
-    struct stat path_stat;
-
-    resolved_path[0] = '\0';
-
     if (path[0] != '/') {
         snprintf(initial_path, sizeof(initial_path), "/%s", path);
     } else {
         snprintf(initial_path, sizeof(initial_path), "%s", path);
     }
 
-    while (path_to_resolve != NULL) {
-        char current_segment[MAX_PATH_BUFFER_SIZE];
+    char *path_to_resolve = initial_path + 1;
+    while (*path_to_resolve != '\0') {
         char *next = strchr(path_to_resolve + 1, '/');
-        size_t current_segment_size;
+        size_t segment_len;
         if (next != NULL) {
-            current_segment_size = next - path_to_resolve;
+            segment_len = next - path_to_resolve;
         } else {
-            current_segment_size = strlen(path_to_resolve);
-        }
-        memcpy(current_segment, path_to_resolve, current_segment_size);
-        current_segment[current_segment_size] = '\0';
-        // printf("%s\n", current_segment);
-        if (strcmp(current_segment, "/.") == 0) {
-            path_to_resolve = next;
-            continue;
-        }
-        if (strcmp(current_segment, "/..") == 0) {
-            if (resolved_path[0] != '\0') {
-                if (*(resolved_path + strlen(resolved_path) - 1) == '/') {
-                    *(resolved_path + strlen(resolved_path) - 1) = '\0';
-                }
-                char *last_slash = strrchr(resolved_path, '/');
-                if (last_slash != NULL) {
-                    *last_slash = '\0';
-                }
-            }
-            path_to_resolve = next;
-            continue;
+            segment_len = strlen(path_to_resolve);
         }
 
-        if (resolved_path[0] != '\0' && resolved_path[strlen(resolved_path) - 1] == '/' && current_segment[0] == '/') {
-            snprintf(resolved_path + strlen(resolved_path), MAX_PATH_BUFFER_SIZE - strlen(resolved_path), "%s",
-                     current_segment + 1);
-        } else {
-            snprintf(resolved_path + strlen(resolved_path), MAX_PATH_BUFFER_SIZE - strlen(resolved_path), "%s",
-                     current_segment);
-        }
+        fs_string *segment = (fs_string *) fs_xmalloc(sizeof(fs_string));
+        fs_string_init(segment);
+        fs_string_reserve(segment, segment_len);
+        memcpy(segment->data, path_to_resolve, segment_len);
+        segment->length = segment_len;
 
-        const ssize_t len = readlink(resolved_path, symlink_target, MAX_PATH_BUFFER_SIZE - 1);
-        if (len != -1) {
-            symlink_target[len] = '\0';
-            if (symlink_target[0] == '/') {
-                snprintf(resolved_path, MAX_PATH_BUFFER_SIZE, "%s", symlink_target);
-            } else {
-                char *path_to_resolve_tmp = malloc(2 * MAX_PATH_BUFFER_SIZE + 1);
-                if (path_to_resolve_tmp == NULL) { exit(2); }
-                if (next != NULL) {
-                    snprintf(path_to_resolve_tmp, 2 * MAX_PATH_BUFFER_SIZE + 1, "/%s%s", symlink_target, next);
-                }
-                else {
-                    snprintf(path_to_resolve_tmp, 2 * MAX_PATH_BUFFER_SIZE + 1, "/%s", symlink_target);
-                }
-                snprintf(path_to_resolve, MAX_PATH_BUFFER_SIZE, "%s", path_to_resolve_tmp);
-                resolved_path[0] = '\0';
-                free(path_to_resolve_tmp);
-                continue;
-            }
-        }
+        vector_add(segments, segment);
+        path_to_resolve = next ? next + 1 : path_to_resolve + segment_len;
+    }
+}
 
-        if (stat(resolved_path, &path_stat) == -1) {
-            if (resolved_path[0] != '\0') {
-                if (*(resolved_path + strlen(resolved_path) - 1) == '/') {
-                    *(resolved_path + strlen(resolved_path) - 1) = '\0';
-                }
-                char *last_slash = strrchr(resolved_path, '/');
-                if (last_slash != NULL) {
-                    *(last_slash + 1) = '\0';
-                }
-            }
+void abspath(const char *path) {
+    fs_vector resolved_path_segments;
+    vector_init(&resolved_path_segments);
 
-            if (*(current_segment + strlen(current_segment) - 1) == '/') { *(current_segment + strlen(current_segment) - 1) = '\0'; }
+    char symlink_target[MAX_PATH_BUFFER_SIZE];
+    fs_vector path_segments;
+    vector_init(&path_segments);
+    struct stat path_stat;
 
-            if (errno == ENOTDIR) {
-                if (resolved_path[0] != '\0') {
-                    if (*(resolved_path + strlen(resolved_path) - 1) == '/') {
-                        *(resolved_path + strlen(resolved_path) - 1) = '\0';
-                    }
-                    char *last_slash = strrchr(resolved_path, '/');
-                    if (last_slash != NULL) {
-                        snprintf(current_segment, MAX_PATH_BUFFER_SIZE, "%s", last_slash);
+    // Split the input path into segments and add them to the vector
+    parse_path_to_segments(path, &path_segments);
 
-                        *(last_slash + 1) = '\0';
-                    }
-                }
+    VectorIterator iterator;
+    vector_iterator_init(&iterator, &path_segments);
 
-            }
-
-            report_error(resolved_path, current_segment + 1, errno);
-            goto cleanup;
-        }
-
-        if (S_ISDIR(path_stat.st_mode) && resolved_path[strlen(resolved_path) - 1] != '/') {
-            snprintf(resolved_path + strlen(resolved_path), sizeof(resolved_path) - strlen(resolved_path), "/");
-        }
-
-        path_to_resolve = next;
+    while (vector_iterator_has_next(&iterator)) {
+        fs_string *segment = vector_iterator_next(&iterator);
+        printf("%.*s\n", (int) segment->length, segment->data);
     }
 
-    report_path(resolved_path);
+    vector_iterator_init(&iterator, &path_segments);
+    while (vector_iterator_has_next(&iterator)) {
+        fs_string *segment = vector_iterator_next(&iterator);
+
+        // Handle "." segment
+        if (strcmp(segment->data, ".") == 0) {
+            fs_string_free(segment);
+            continue;
+        }
+
+        // Handle ".." segment
+        if (strcmp(segment->data, "..") == 0) {
+            fs_string_free(segment);
+            if (resolved_path_segments.size > 0) {
+                fs_string *str = (fs_string *) vector_pop_or_null(&resolved_path_segments);
+                fs_string_free(str);
+                free(str);
+            }
+            continue;
+        }
+
+        // Append the current segment to the resolved path segments
+        fs_string *copy = fs_string_duplicate(segment);
+        vector_add(&resolved_path_segments, copy);
+
+        // Handle symlinks
+        fs_string resolved_path_str;
+        fs_string_init(&resolved_path_str);
+        for (size_t i = 0; i < resolved_path_segments.size; ++i) {
+            fs_string *sym_segment = (fs_string *) resolved_path_segments.data[i];
+            fs_string_append(&resolved_path_str, "/");
+            fs_string_append(&resolved_path_str, sym_segment->data);
+        }
+
+        char *resolved_path_cstr = fs_string_to_cstr(&resolved_path_str);
+        const ssize_t len = readlink(resolved_path_cstr, symlink_target, MAX_PATH_BUFFER_SIZE - 1);
+        free(resolved_path_cstr);
+        fs_string_free(&resolved_path_str);
+
+        if (len != -1) {
+            symlink_target[len] = '\0';
+            vector_free_all_elements(&resolved_path_segments, (void (*)(void *)) fs_string_free);
+            resolved_path_segments.size = 0;
+            vector_init(&resolved_path_segments);
+
+            // Split symlink target into segments and add to resolved path
+            parse_path_to_segments(symlink_target, &resolved_path_segments);
+            vector_iterator_init(&iterator, &path_segments); // Restart iteration after resolving symlink
+        }
+    }
+
+    // Check if the current path segment exists
+    fs_string resolved_path_check;
+    fs_string_init(&resolved_path_check);
+    for (size_t i = 0; i < resolved_path_segments.size; ++i) {
+        fs_string *segment = (fs_string *) resolved_path_segments.data[i];
+        fs_string_append(&resolved_path_check, "/");
+        fs_string_append(&resolved_path_check, segment->data);
+    }
+
+    char *resolved_path_cstr_check = fs_string_to_cstr(&resolved_path_check);
+    if (stat(resolved_path_cstr_check, &path_stat) == -1) {
+        report_error(resolved_path_cstr_check, "", errno);
+        free(resolved_path_cstr_check);
+        fs_string_free(&resolved_path_check);
+        goto cleanup;
+    }
+    free(resolved_path_cstr_check);
+    fs_string_free(&resolved_path_check);
+
+    // Create final resolved path string
+    fs_string final_path_str;
+    fs_string_init(&final_path_str);
+    for (size_t i = 0; i < resolved_path_segments.size; ++i) {
+        fs_string *segment = (fs_string *) resolved_path_segments.data[i];
+        fs_string_append(&final_path_str, "/");
+        fs_string_append(&final_path_str, segment->data);
+    }
+
+    char *final_path = fs_string_to_cstr(&final_path_str);
+    report_path(final_path);
+    free(final_path);
+    fs_string_free(&final_path_str);
 
 cleanup:
-    free(resolved_path);
+    vector_free_all_elements(&resolved_path_segments, (void (*)(void *)) fs_string_free);
+    vector_free(&resolved_path_segments);
+    vector_free_all_elements(&path_segments, (void (*)(void *)) fs_string_free);
+    vector_free(&path_segments);
 }
