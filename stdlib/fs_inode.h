@@ -16,6 +16,8 @@
 
 #define DIRECT_POINTERS 12
 #define BLOCK_ADDRESS_SIZE 4
+#define EXT2_FS_DIR 0x4000
+#define EXT2_FS_FILE 0x8000
 
 #pragma pack(push, 1)
 
@@ -55,5 +57,13 @@ int read_block(int fd, uint32_t block_size, uint32_t block_address, char *buffer
 void print_extra_data(char *extra_data, int extra_data_size) ;
 
 void print_inode_info(fs_inode *inode, uint16_t inode_size, int inode_number, uint32_t block_size, int fd);
+
+static inline int is_inode_directory(const fs_inode *inode) {
+    return (inode->type_and_permissions & 0xF000) == EXT2_FS_DIR;
+}
+
+static inline int is_inode_file(const fs_inode *inode) {
+    return (inode->type_and_permissions & 0xF000) == EXT2_FS_FILE;
+}
 
 #endif // FS_INODE_H

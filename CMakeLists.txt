@@ -100,6 +100,7 @@ add_executable(05
         05-ext2-read-dir/main.c
         05-ext2-read-dir/solution.c
         05-ext2-read-dir/solution.h
+        05-ext2-read-dir/callbacks.c
         stdlib/fs_malloc.c
         stdlib/fs_block_group_descriptor_table.c
         stdlib/fs_block_group_descriptor_table.h
@@ -109,6 +110,8 @@ add_executable(05
         stdlib/fs_superblock.h
         stdlib/fs_ext2.c
         stdlib/fs_ext2.h
+        stdlib/fs_dir_entry.c
+        stdlib/fs_dir_entry.h
 )
 
 # curl -s -X POST http://185.106.102.104:9091/submit/OgurtsovAndrei/03-io_uring
