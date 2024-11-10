@@ -29,23 +29,17 @@ int dump_file(int img, int inode_nr, int out) {
         if (ret < 0) goto cleanup;
 
         if (ret > 0) {
-            const u_int32_t bytes_written = pwrite(out, buffer, i->block_size, bytes_read);
-            if (bytes_written != i->block_size) {
-                ret = -EIO;
-                goto cleanup;
-            }
-            // print_extra_data(buffer, i->block_size);
-            // printf("Buffer content:\n%.*s\n", i->block_size, buffer);
-            bytes_read += i->block_size;
-        } else {
-            const u_int32_t bytes_to_write = file_size - bytes_read;
+            u_int32_t bytes_to_write = file_size - bytes_read;
+            if (bytes_to_write > i->block_size) { bytes_to_write = i->block_size; }
             const u_int32_t bytes_written = pwrite(out, buffer, bytes_to_write, bytes_read);
             if (bytes_written != bytes_to_write) {
                 ret = -EIO;
                 goto cleanup;
             }
-            // print_extra_data(buffer, file_size - bytes_read);
-            // printf("Buffer content:\n%.*s\n", file_size - bytes_read, buffer);
+            bytes_read += bytes_to_write;
+            // print_extra_data(buffer, i->block_size);
+            // printf("Buffer content:\n%.*s\n", i->block_size, buffer);
+        } else /* ret == 0 */  {
             break;
         }
     }

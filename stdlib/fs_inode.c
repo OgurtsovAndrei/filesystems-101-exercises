@@ -12,6 +12,7 @@
 #include "fs_superblock.h"
 #include "fs_inode.h"
 
+#include "fs_ext2.h"
 #include "fs_malloc.h"
 
 int init_inode(int fd, fs_superblock *superblock, fs_blockgroup_descriptor *blockgroup_descriptor, int inode_number,
@@ -43,104 +44,6 @@ int init_inode(int fd, fs_superblock *superblock, fs_blockgroup_descriptor *bloc
 cleanup_inode:
     free(inode);
     return ret;
-}
-
-int get_inode_block_address_by_index(int fd, fs_inode *inode, uint32_t block_size, uint32_t inode_index,
-                                     uint32_t *block_address_ptr, int64_t *single_indirect_block_cache_id,
-                                     int64_t *double_indirect_block_cache_id, int64_t *triple_indirect_block_cache_id, char* cache) {
-    uint32_t used_blocks = (inode->size_lower + block_size - 1) / block_size;
-    if (inode_index >= used_blocks) return -ERANGE;
-
-    uint32_t block_address;
-
-    if (inode_index < DIRECT_POINTERS) { // Direct block
-        block_address = inode->direct_block_pointers[inode_index];
-        goto end_get_id;
-    }
-
-    char *single_cache = cache;                  // Block 1
-    char *double_cache = cache + block_size;     // Block 2
-    char *triple_cache = cache + 2 * block_size; // Block 3
-
-    if (inode_index < (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE)) { // Single indirect block
-        uint32_t singly_offset = inode_index - DIRECT_POINTERS;
-
-        if (*single_indirect_block_cache_id != (int64_t) inode->singly_indirect_block) {
-            if (pread(fd, single_cache, block_size, inode->singly_indirect_block * block_size) != block_size) {
-                return -EIO;
-            }
-            *single_indirect_block_cache_id = (int64_t) inode->singly_indirect_block;
-        }
-
-        block_address = ((uint32_t*)single_cache)[singly_offset];
-        goto end_get_id;
-    }
-
-    if (inode_index < (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE +
-                       (block_size / BLOCK_ADDRESS_SIZE) * (block_size / BLOCK_ADDRESS_SIZE))) { // Double indirect block
-        uint32_t doubly_offset = inode_index - (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE);
-        uint32_t singly_index = doubly_offset / (block_size / BLOCK_ADDRESS_SIZE);
-        uint32_t indirect_index = doubly_offset % (block_size / BLOCK_ADDRESS_SIZE);
-
-        if (*double_indirect_block_cache_id != (int64_t) inode->doubly_indirect_block) {
-            if (pread(fd, double_cache, block_size, inode->doubly_indirect_block * block_size) != block_size) {
-                return -EIO;
-            }
-            *double_indirect_block_cache_id = (int64_t) inode->doubly_indirect_block;
-        }
-
-        uint32_t singly_indirect_block_address = ((uint32_t*)double_cache)[singly_index];
-
-        if (*single_indirect_block_cache_id != (int64_t) singly_indirect_block_address) {
-            if (pread(fd, single_cache, block_size, singly_indirect_block_address * block_size) != block_size) {
-                return -EIO;
-            }
-            *single_indirect_block_cache_id = (int64_t) singly_indirect_block_address;
-        }
-
-        block_address = ((uint32_t*)single_cache)[indirect_index];
-        goto end_get_id;
-    }
-
-    { // Triple indirect block
-        uint32_t triply_offset = inode_index - (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE +
-                                                (block_size / BLOCK_ADDRESS_SIZE) * (block_size / BLOCK_ADDRESS_SIZE));
-        uint32_t doubly_index = triply_offset / ((block_size / BLOCK_ADDRESS_SIZE) * (block_size / BLOCK_ADDRESS_SIZE));
-        uint32_t singly_index = (triply_offset / (block_size / BLOCK_ADDRESS_SIZE)) % (block_size / BLOCK_ADDRESS_SIZE);
-        uint32_t indirect_index = triply_offset % (block_size / BLOCK_ADDRESS_SIZE);
-
-        if (*triple_indirect_block_cache_id != (int64_t) inode->triply_indirect_block) {
-            if (pread(fd, triple_cache, block_size, inode->triply_indirect_block * block_size) != block_size) {
-                return -EIO;
-            }
-            *triple_indirect_block_cache_id = (int64_t) inode->triply_indirect_block;
-        }
-
-        uint32_t double_indirect_block_address = ((uint32_t*)triple_cache)[doubly_index];
-
-        if (*double_indirect_block_cache_id != (int64_t) double_indirect_block_address) {
-            if (pread(fd, double_cache, block_size, double_indirect_block_address * block_size) != block_size) {
-                return -EIO;
-            }
-            *double_indirect_block_cache_id = (int64_t) double_indirect_block_address;
-        }
-
-        uint32_t singly_indirect_block_address = ((uint32_t*)double_cache)[singly_index];
-
-        if (*single_indirect_block_cache_id != (int64_t) singly_indirect_block_address) {
-            if (pread(fd, single_cache, block_size, singly_indirect_block_address * block_size) != block_size) {
-                return -EIO;
-            }
-            *single_indirect_block_cache_id = (int64_t) singly_indirect_block_address;
-        }
-
-        block_address = ((uint32_t*)single_cache)[indirect_index];
-    }
-
-end_get_id:
-    *block_address_ptr = block_address;
-    if (inode_index == used_blocks - 1) return 0;
-    return 1;
 }
 
 int read_block(int fd, uint32_t block_size, uint32_t block_address, char *buffer) {
@@ -178,11 +81,7 @@ void print_inode_info(fs_inode *inode, uint16_t inode_size, int inode_number, ui
         printf("File content from the first block:\n");
         char *buffer = fs_xmalloc(3 * block_size);
         char *buffer_page = fs_xmalloc(block_size);
-        int64_t single = -1;
-        int64_t double_ = -1;
-        int64_t triple = -1;
-        uint32_t block_addr = 0;
-        get_inode_block_address_by_index(fd, inode, (uint32_t) block_size, 0, &block_addr, &single, &double_, &triple, buffer);
+        uint32_t block_addr = inode->direct_block_pointers[0];
         read_block(fd, block_size, block_addr, buffer_page);
         print_extra_data(buffer_page, (int) block_size);
         free(buffer);

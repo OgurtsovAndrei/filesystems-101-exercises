@@ -71,3 +71,6 @@ int ext2_blkiter_next(struct ext2_blkiter *i, int *blkno);
    Note: ext2_blkiter_free(NULL) is a no-op.
  */
 void ext2_blkiter_free(struct ext2_blkiter *i);
+
+int get_inode_block_address_by_index(int fd,  uint32_t inode_index,
+                                     uint32_t *block_address_ptr, struct ext2_blkiter *bllkiter);

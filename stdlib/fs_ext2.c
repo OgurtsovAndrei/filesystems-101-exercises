@@ -69,11 +69,7 @@ cleenup:
 int ext2_blkiter_next(struct ext2_blkiter *i, int *blkno) {
     uint32_t block_number = 0;
 
-    int ret = get_inode_block_address_by_index(i->fd, i->inode, i->block_size, i->iterator_block_index++, &block_number,
-                                               &i->single_indirect_block_cache_id,
-                                               &i->double_indirect_block_cache_id,
-                                               &i->triple_indirect_block_cache_id,
-                                               i->indirect_pointer_cache);
+    int ret = get_inode_block_address_by_index(i->fd, i->iterator_block_index++, &block_number, i);
     if (ret == -ERANGE) return 0;
     if (ret < 0) { return ret; }
     *blkno = (int) block_number;
@@ -85,4 +81,103 @@ void ext2_blkiter_free(struct ext2_blkiter *i) {
     free(i->inode);
     free(i->blockgroup_descriptor);
     free(i);
+}
+
+int get_inode_block_address_by_index(int fd, uint32_t inode_index,
+                                     uint32_t *block_address_ptr, struct ext2_blkiter *bllkiter) {
+    uint32_t block_size = bllkiter->block_size;
+    uint32_t used_blocks = (bllkiter->inode->size_lower + block_size - 1) / block_size;
+    if (inode_index >= used_blocks) return -ERANGE;
+
+    uint32_t block_address;
+
+    if (inode_index < DIRECT_POINTERS) { // Direct block
+        block_address = bllkiter->inode->direct_block_pointers[inode_index];
+        goto end_get_id;
+    }
+
+    char * cache = bllkiter->indirect_pointer_cache;
+    char *single_cache = cache;                            // Block 1
+    char *double_cache = cache + block_size;     // Block 2
+    char *triple_cache = cache + 2 * block_size; // Block 3
+
+    if (inode_index < (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE)) { // Single indirect block
+        uint32_t singly_offset = inode_index - DIRECT_POINTERS;
+
+        if (bllkiter->single_indirect_block_cache_id != (int64_t) bllkiter->inode->singly_indirect_block) {
+            if (pread(fd, single_cache, block_size, bllkiter->inode->singly_indirect_block * block_size) != block_size) {
+                return -EIO;
+            }
+            bllkiter->single_indirect_block_cache_id = (int64_t) bllkiter->inode->singly_indirect_block;
+        }
+
+        block_address = ((uint32_t*)single_cache)[singly_offset];
+        goto end_get_id;
+    }
+
+    if (inode_index < (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE +
+                       (block_size / BLOCK_ADDRESS_SIZE) * (block_size / BLOCK_ADDRESS_SIZE))) { // Double indirect block
+        uint32_t doubly_offset = inode_index - (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE);
+        uint32_t singly_index = doubly_offset / (block_size / BLOCK_ADDRESS_SIZE);
+        uint32_t indirect_index = doubly_offset % (block_size / BLOCK_ADDRESS_SIZE);
+
+        if (bllkiter->double_indirect_block_cache_id != (int64_t) bllkiter->inode->doubly_indirect_block) {
+            if (pread(fd, double_cache, block_size, bllkiter->inode->doubly_indirect_block * block_size) != block_size) {
+                return -EIO;
+            }
+            bllkiter->double_indirect_block_cache_id = (int64_t) bllkiter->inode->doubly_indirect_block;
+        }
+
+        uint32_t singly_indirect_block_address = ((uint32_t*)double_cache)[singly_index];
+
+        if (bllkiter->single_indirect_block_cache_id != (int64_t) singly_indirect_block_address) {
+            if (pread(fd, single_cache, block_size, singly_indirect_block_address * block_size) != block_size) {
+                return -EIO;
+            }
+            bllkiter->single_indirect_block_cache_id = (int64_t) singly_indirect_block_address;
+        }
+
+        block_address = ((uint32_t*)single_cache)[indirect_index];
+        goto end_get_id;
+    }
+
+    { // Triple indirect block
+        uint32_t triply_offset = inode_index - (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE +
+                                                (block_size / BLOCK_ADDRESS_SIZE) * (block_size / BLOCK_ADDRESS_SIZE));
+        uint32_t doubly_index = triply_offset / ((block_size / BLOCK_ADDRESS_SIZE) * (block_size / BLOCK_ADDRESS_SIZE));
+        uint32_t singly_index = (triply_offset / (block_size / BLOCK_ADDRESS_SIZE)) % (block_size / BLOCK_ADDRESS_SIZE);
+        uint32_t indirect_index = triply_offset % (block_size / BLOCK_ADDRESS_SIZE);
+
+        if (bllkiter->triple_indirect_block_cache_id != (int64_t) bllkiter->inode->triply_indirect_block) {
+            if (pread(fd, triple_cache, block_size, bllkiter->inode->triply_indirect_block * block_size) != block_size) {
+                return -EIO;
+            }
+            bllkiter->triple_indirect_block_cache_id = (int64_t) bllkiter->inode->triply_indirect_block;
+        }
+
+        uint32_t double_indirect_block_address = ((uint32_t*)triple_cache)[doubly_index];
+
+        if (bllkiter->double_indirect_block_cache_id != (int64_t) double_indirect_block_address) {
+            if (pread(fd, double_cache, block_size, double_indirect_block_address * block_size) != block_size) {
+                return -EIO;
+            }
+            bllkiter->double_indirect_block_cache_id = (int64_t) double_indirect_block_address;
+        }
+
+        uint32_t singly_indirect_block_address = ((uint32_t*)double_cache)[singly_index];
+
+        if (bllkiter->single_indirect_block_cache_id != (int64_t) singly_indirect_block_address) {
+            if (pread(fd, single_cache, block_size, singly_indirect_block_address * block_size) != block_size) {
+                return -EIO;
+            }
+            bllkiter->single_indirect_block_cache_id = (int64_t) singly_indirect_block_address;
+        }
+
+        block_address = ((uint32_t*)single_cache)[indirect_index];
+    }
+
+end_get_id:
+    *block_address_ptr = block_address;
+    if (inode_index == used_blocks - 1) return 0;
+    return 1;
 }
