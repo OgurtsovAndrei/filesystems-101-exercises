@@ -25,7 +25,6 @@ int init_blockgroup_descriptor(int fd, fs_superblock *superblock,
     __off64_t begining_of_blockgroup_descriptor;
     if (superblock->s_log_block_size_kbytes == 0) begining_of_blockgroup_descriptor = (1 << 11);
     else begining_of_blockgroup_descriptor = 1 << (10 + superblock->s_log_block_size_kbytes);
-    // begining_of_blockgroup_descriptor += superblock->s_blocks_per_group * (1 << (10 + superblock->s_log_block_size_kbytes)) * block_group_num;
     begining_of_blockgroup_descriptor += sizeof(fs_blockgroup_descriptor) * block_group_num;
     if (pread(fd, blockgroup_descriptor, sizeof(fs_blockgroup_descriptor), begining_of_blockgroup_descriptor)
         != sizeof(fs_blockgroup_descriptor)) {

@@ -15,7 +15,6 @@ add_compile_options(-fsanitize=address -fsanitize=undefined)
 add_link_options(-fsanitize=address -fsanitize=undefined)
 include_directories(stdlib)
 
-#include_directories(00-ps)
 add_executable(00
         00-ps/callbacks.c
         00-ps/main.c
@@ -34,16 +33,13 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(FUSE3 REQUIRED fuse3)
 include_directories(${FUSE3_INCLUDE_DIRS})
 
-#include_directories(02-fuse-helloworld)
 add_executable(02
-        #        02-fuse-helloworld/solution1
         02-fuse-helloworld/solution.c
         02-fuse-helloworld/solution.h
         02-fuse-helloworld/main.c
 )
 target_link_libraries(02 ${FUSE3_LIBRARIES})
 
-#include_directories(13-realpath)
 add_executable(13
         13-realpath/callbacks.c
         13-realpath/main.c
@@ -51,7 +47,6 @@ add_executable(13
         13-realpath/solution.h
 )
 
-#include_directories(03-io_uring)
 add_executable(03
         03-io_uring/main.c
         03-io_uring/solution.c
@@ -60,9 +55,6 @@ add_executable(03
 )
 target_link_libraries(03 uring)
 
-#add_executable(03-cat
-#        03-io_uring/cat
-#)
 
 add_executable(14
         14-ext2-blkiter/main.c
@@ -93,6 +85,21 @@ add_executable(04
         04-ext2-read-file/main.c
         04-ext2-read-file/solution.c
         04-ext2-read-file/solution.h
+        stdlib/fs_malloc.c
+        stdlib/fs_block_group_descriptor_table.c
+        stdlib/fs_block_group_descriptor_table.h
+        stdlib/fs_inode.c
+        stdlib/fs_inode.h
+        stdlib/fs_superblock.c
+        stdlib/fs_superblock.h
+        stdlib/fs_ext2.c
+        stdlib/fs_ext2.h
+)
+
+add_executable(05
+        05-ext2-read-dir/main.c
+        05-ext2-read-dir/solution.c
+        05-ext2-read-dir/solution.h
         stdlib/fs_malloc.c
         stdlib/fs_block_group_descriptor_table.c
         stdlib/fs_block_group_descriptor_table.h
