@@ -173,5 +173,24 @@ add_executable(08
         stdlib/fs_void_vector.h
 )
 
+add_executable(10
+        10-ext2-fuse/solution.h
+        10-ext2-fuse/main.c
+        10-ext2-fuse/solution.c
+        stdlib/fs_malloc.c
+        stdlib/fs_block_group_descriptor_table.c
+        stdlib/fs_block_group_descriptor_table.h
+        stdlib/fs_inode.c
+        stdlib/fs_inode.h
+        stdlib/fs_superblock.c
+        stdlib/fs_superblock.h
+        stdlib/fs_ext2.c
+        stdlib/fs_ext2.h
+        stdlib/fs_dir_entry.c
+        stdlib/fs_dir_entry.h
+        stdlib/fs_void_vector.c
+        stdlib/fs_void_vector.h
+)
+
 # curl -s -X POST http://185.106.102.104:9091/submit/OgurtsovAndrei/03-io_uring
 # curl -s -X GET http://185.106.102.104:9091/results/OgurtsovAndrei/03-io_uring/last | jq

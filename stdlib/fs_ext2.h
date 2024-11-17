@@ -83,6 +83,13 @@ int get_inode_block_address_by_index(
     struct ext2_blkiter *bllkiter
 );
 
+typedef int (*on_write_t)(const void* buffer, size_t bytes_to_write, off_t bytes_read, void* context);
+
+static inline int file_write_callback(const void* buffer, size_t bytes_to_write, off_t bytes_read, void* context) {
+    const int out = *(int*)context;
+    return pwrite(out, buffer, bytes_to_write, bytes_read);
+}
+
 /**
    Implement this function to copy the content of an inode @inode_nr
    to a file descriptor @out. @img is a file descriptor of an open
@@ -93,8 +100,8 @@ int get_inode_block_address_by_index(
    If a copy was successful, return 0. If an error occurred during
    a read or a write, return -errno.
 */
-int dump_ext2_file(int img, int inode_nr, int out);
+int dump_ext2_file(int img, int inode_nr, void* context, on_write_t on_write);
 
 void parse_path_to_segments(const char *path, fs_vector *segments);
 
-int dump_ext2_file_on_path(int img, const char *path, int out);
+int dump_ext2_file_on_path(int img, const char *path, void* context, on_write_t on_write);

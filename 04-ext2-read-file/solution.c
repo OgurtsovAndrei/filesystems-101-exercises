@@ -10,5 +10,5 @@
 #include <stdlib.h>
 
 int dump_file(int img, int inode_nr, int out) {
-    return dump_ext2_file(img, inode_nr, out);
+    return dump_ext2_file(img, inode_nr, &out, file_write_callback);
 }

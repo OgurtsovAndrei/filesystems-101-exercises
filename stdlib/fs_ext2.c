@@ -228,7 +228,7 @@ end_get_id:
 }
 
 
-int dump_ext2_file(int img, int inode_nr, int out) {
+int dump_ext2_file(int img, int inode_nr, void* context, on_write_t on_write){
     struct ext2_fs *fs = NULL;
     struct ext2_blkiter *i = NULL;
     int ret;
@@ -250,7 +250,7 @@ int dump_ext2_file(int img, int inode_nr, int out) {
         if (ret > 0) {
             u_int32_t bytes_to_write = file_size - bytes_read;
             if (bytes_to_write > i->block_size) { bytes_to_write = i->block_size; }
-            const u_int32_t bytes_written = pwrite(out, buffer, bytes_to_write, bytes_read);
+            const u_int32_t bytes_written = on_write(buffer, bytes_to_write, bytes_read, context);
             if (bytes_written != bytes_to_write) {
                 ret = -EIO;
                 goto cleanup;
@@ -277,7 +277,7 @@ int dump_ext2_file(int img, int inode_nr, int out) {
 }
 
 
-int dump_ext2_file_on_path(int img, const char *path, int out) {
+int dump_ext2_file_on_path(int img, const char *path, void* context, on_write_t on_write) {
     int ret = 0;
     struct ext2_fs *file_system = NULL;
     struct ext2_blkiter *blkiter = NULL;
@@ -324,7 +324,7 @@ int dump_ext2_file_on_path(int img, const char *path, int out) {
                     goto clean_segment;
                 }
 
-                ret = dump_ext2_file(img, (int) entry->inode, out);
+                ret = dump_ext2_file(img, (int) entry->inode, context, on_write);
                 goto clean_segment;
             }
             // have to be directory

@@ -1,9 +1,9 @@
-#include <solution.h>
-
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <err.h>
+
+#include "solution.h"
 
 int main(int argc, char **argv)
 {
