@@ -62,7 +62,7 @@ int is_file(dir_entry *entry) {
 
 
 int apply_on_entries(struct ext2_fs *file_system, struct ext2_blkiter *blkiter,
-                     void *context, int (*lambda)(void *context, dir_entry *entry)) {
+                     void *context, int (*lambda)(void *context, const dir_entry *entry)) {
     int ret;
     char *buffer = fs_xmalloc(blkiter->block_size);
     uint32_t dir_size = blkiter->inode->size_lower;
@@ -111,6 +111,7 @@ int apply_on_entries(struct ext2_fs *file_system, struct ext2_blkiter *blkiter,
 
             offset += entry->entry_size;
             bytes_read += entry->entry_size;
+            free_entry(entry);
         }
     }
 
@@ -121,9 +122,11 @@ int apply_on_entries(struct ext2_fs *file_system, struct ext2_blkiter *blkiter,
     return ret;
 }
 
-int add_entry_to_vector(void *context, dir_entry *entry) {
+int add_entry_to_vector(void *context, const dir_entry *entry) {
     fs_vector *vector = (fs_vector *) context;
-    vector_add(vector, entry);
+    dir_entry *entry_copy = fs_xmalloc(entry->entry_size);
+    memcpy(entry_copy, entry, entry->entry_size);
+    vector_add(vector, entry_copy);
     return 0;
 }
 

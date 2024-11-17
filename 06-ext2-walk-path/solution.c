@@ -66,6 +66,7 @@ int dump_file(int img, const char *path, int out) {
 
     while (vector_iterator_has_next(&iterator) && current_inode != 0) {
         fs_string *segment = vector_iterator_next(&iterator);
+        // printf("Look for:  %.*s\n", (int) segment->length, segment->data);
 
         if ((ret = ext2_blkiter_init(&blkiter, file_system, current_inode))) {
             ret = -ENOENT;
@@ -78,12 +79,17 @@ int dump_file(int img, const char *path, int out) {
         uint32_t segment_inode = 0;
         VectorIterator dir_entries_iterator;
         vector_iterator_init(&dir_entries_iterator, &dir_entries);
+        // printf("Entries:\n");
         while (vector_iterator_has_next(&dir_entries_iterator)) {
             dir_entry *entry = (dir_entry *) vector_iterator_next(&dir_entries_iterator);
-            if (iterator.current == iterator.vector->size - 1) {
+            if (iterator.current == iterator.vector->size) {
                 // have to be a file
                 char *file_name = get_name(entry);
-                if (!memcmp(file_name, segment->data, segment->length)) { continue; }
+                // printf("File name: %s\n", file_name);
+                if (strlen(file_name) != segment->length || 0 != memcmp(file_name, segment->data, segment->length)) {
+                    free(file_name);
+                    continue;
+                }
                 free(file_name);
                 if (!is_file(entry)) {
                     ret = -EISDIR;
@@ -95,8 +101,12 @@ int dump_file(int img, const char *path, int out) {
             }
             // have to be directory
             char *dir_name = get_name(entry);
+            // printf("Dir name: %s\n", dir_name);
             size_t dir_name_len = strlen(dir_name);
-            if (dir_name_len == segment->length && !memcmp(dir_name, segment->data, segment->length)) { continue; }
+            if (dir_name_len != segment->length || 0 != strncmp(dir_name, segment->data, dir_name_len)) {
+                free(dir_name);
+                continue;
+            }
             free(dir_name);
             if (!is_dir(entry)) {
                 ret = -ENOTDIR;
@@ -109,10 +119,10 @@ int dump_file(int img, const char *path, int out) {
 
         if (segment_inode == 0) {
             ret = -ENOENT;
-            break;
         }
 
     clean_segment:
+        // printf("segment Cleanup\n");
         current_inode = (int) segment_inode;
         vector_free_all_elements(&dir_entries, (void (*)(void *)) free_entry);
         vector_free(&dir_entries);
@@ -121,6 +131,7 @@ int dump_file(int img, const char *path, int out) {
 
 
 cleanup:
+    // printf("Cleanup\n");
     vector_free_all_elements(&path_segments, (void (*)(void *)) fs_string_free);
     vector_free(&path_segments);
     ext2_fs_free(file_system);

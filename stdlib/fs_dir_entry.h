@@ -47,7 +47,7 @@ int is_file(dir_entry *entry);
 int is_dir(dir_entry *entry);
 
 int apply_on_entries(struct ext2_fs *file_system, struct ext2_blkiter *blkiter,
-                     void *context, int (*lambda)(void *context, dir_entry *entry));
+                     void *context, int (*lambda)(void *context, const dir_entry *entry));
 
 int dump_directory(struct ext2_fs *file_system, struct ext2_blkiter *blkiter, fs_vector *vector);
 
