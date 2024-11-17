@@ -10,34 +10,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-void parse_path_to_segments(const char *path, fs_vector *segments) {
-    char initial_path[MAX_PATH_BUFFER_SIZE];
-    if (path[0] != '/') {
-        snprintf(initial_path, sizeof(initial_path), "/%s", path);
-    } else {
-        snprintf(initial_path, sizeof(initial_path), "%s", path);
-    }
-
-    char *path_to_resolve = initial_path + 1;
-    while (*path_to_resolve != '\0') {
-        char *next = strchr(path_to_resolve + 1, '/');
-        size_t segment_len;
-        if (next != NULL) {
-            segment_len = next - path_to_resolve;
-        } else {
-            segment_len = strlen(path_to_resolve);
-        }
-
-        fs_string *segment = (fs_string *) fs_xmalloc(sizeof(fs_string));
-        fs_string_init(segment);
-        fs_string_reserve(segment, segment_len);
-        memcpy(segment->data, path_to_resolve, segment_len);
-        segment->length = segment_len;
-
-        vector_add(segments, segment);
-        path_to_resolve = next ? next + 1 : path_to_resolve + segment_len;
-    }
-}
+#include "fs_ext2.h"
 
 void abspath(const char *path) {
     fs_vector resolved_path_segments;

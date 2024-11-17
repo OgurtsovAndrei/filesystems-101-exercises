@@ -12,6 +12,8 @@
 #include "fs_superblock.h"
 #include "fs_inode.h"
 
+#include <string.h>
+
 #include "fs_ext2.h"
 #include "fs_malloc.h"
 
@@ -47,7 +49,14 @@ cleanup_inode:
 }
 
 int read_block(int fd, uint32_t block_size, uint32_t block_address, char *buffer) {
-    if (pread(fd, buffer, block_size, block_address * block_size) != block_size) return -EIO;
+    if (block_address == 0) { // sparse
+        memset(buffer, 0, block_size);
+    } else /* basic block */  {
+        if (pread(fd, buffer, block_size, block_address * block_size) !=
+            block_size) {
+            return  -EIO;
+            }
+    }
     return 0;
 }
 

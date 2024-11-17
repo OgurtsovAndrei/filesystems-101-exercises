@@ -19,13 +19,15 @@ add_executable(00
         00-ps/callbacks.c
         00-ps/main.c
         00-ps/solution.c
-        00-ps/solution.h)
+        00-ps/solution.h
+)
 
 add_executable(01
         01-lsof/callbacks.c
         01-lsof/main.c
         01-lsof/solution.c
-        01-lsof/solution.h)
+        01-lsof/solution.h
+)
 
 
 add_definitions(-D_FILE_OFFSET_BITS=64)
@@ -137,6 +139,25 @@ add_executable(06
         06-ext2-walk-path/solution.c
         06-ext2-walk-path/main.c
         06-ext2-walk-path/solution.h
+        stdlib/fs_malloc.c
+        stdlib/fs_block_group_descriptor_table.c
+        stdlib/fs_block_group_descriptor_table.h
+        stdlib/fs_inode.c
+        stdlib/fs_inode.h
+        stdlib/fs_superblock.c
+        stdlib/fs_superblock.h
+        stdlib/fs_ext2.c
+        stdlib/fs_ext2.h
+        stdlib/fs_dir_entry.c
+        stdlib/fs_dir_entry.h
+        stdlib/fs_void_vector.c
+        stdlib/fs_void_vector.h
+)
+
+add_executable(08
+        08-ext2-read-sparse-file/solution.h
+        08-ext2-read-sparse-file/main.c
+        08-ext2-read-sparse-file/solution.c
         stdlib/fs_malloc.c
         stdlib/fs_block_group_descriptor_table.c
         stdlib/fs_block_group_descriptor_table.h

@@ -2,6 +2,10 @@
 #include "fs_inode.h"
 #include <stdint.h>
 
+#include "fs_void_vector.h"
+
+static const int ROOT_INODE_ID = 2;
+
 struct ext2_fs {
     fs_superblock *superblock;
     int fd;
@@ -90,3 +94,7 @@ int get_inode_block_address_by_index(
    a read or a write, return -errno.
 */
 int dump_ext2_file(int img, int inode_nr, int out);
+
+void parse_path_to_segments(const char *path, fs_vector *segments);
+
+int dump_ext2_file_on_path(int img, const char *path, int out);
