@@ -36,6 +36,7 @@ static int ext2_getattr(const char *path, struct stat *stbuf, struct fuse_file_i
         ret = -ENOENT;
         goto only_entry_cleanup;
     }
+    // printf("entry inited");
 
     fs_blockgroup_descriptor *blockgroup_descriptor = fs_xmalloc(sizeof(fs_blockgroup_descriptor));
 
@@ -67,6 +68,7 @@ cleanup:
     free(blockgroup_descriptor);
     free(inode);
 only_entry_cleanup:
+    ext2_entity_free(entity);
     return ret;
 }
 
@@ -167,8 +169,9 @@ struct read_context {
 };
 
 static size_t read_file_callback(const void *buffer, size_t bytes_to_write, const off_t offset, void *context) {
-    if (offset != 0) err(1, "read_file_callback");
     struct read_context *my_context = (struct read_context *) context;
+    (void) offset;
+    // if (offset != (off_t) my_context->written) err(1, "read_file_callback");
 
     // Copy the data directly into the FUSE buffer
     memcpy(my_context->buf + my_context->written, buffer, bytes_to_write);
@@ -188,16 +191,24 @@ static size_t dump_file_part_callback(const int img, int inode, void *context) {
 
     // Use `dump_ext2_file_part` to read the desired part of the file
     int ret = dump_ext2_file_part(img, inode, context, read_file_callback, offset, remaining);
-    if (ret < 0) {
-        return 0; // Signal an error or incomplete read
-    }
+    if (ret < 0) { return 0; }
 
     return task_ctx->written; // Return the total bytes written so far
 }
 
 static int ext2_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
-    printf("Reading %s\n", path);
+    // printf("Reading %s\n", path);
     if ((fi->flags & O_ACCMODE) != O_RDONLY) { return -EACCES; }
+
+    int ret = 0;
+    struct ext2_entity *entity = NULL;
+
+    ret = ext2_entity_init(ctx.fs->fd, path, &entity);
+    if (ret != 0) {
+        // printf("Error finding entity for path: %s\n", path);
+        ret = -ENOENT;
+        goto only_entry_cleanup;
+    }
 
     struct read_context task_ctx = {
         .buf = buf,
@@ -206,12 +217,33 @@ static int ext2_read(const char *path, char *buf, size_t size, off_t offset, str
         .written = 0
     };
 
-    // Use `dump_ext2_file_on_path` with `dump_file_part_callback`
-    int ret = dump_ext2_file_on_path(ctx.fs->fd, path, &task_ctx, (on_file_dump_t) dump_file_part_callback);
-    if (ret < 0) { return ret; }
+    dump_file_part_callback(entity->img, entity->inode, &task_ctx);
 
+    ext2_entity_free(entity);
     return (int) task_ctx.written;
+
+only_entry_cleanup:
+    ext2_entity_free(entity);
+    return ret;
 }
+
+// static int ext2_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+//     printf("Reading %s\n", path);
+//     if ((fi->flags & O_ACCMODE) != O_RDONLY) { return -EACCES; }
+//
+//     struct read_context task_ctx = {
+//         .buf = buf,
+//         .size = size,
+//         .offset = offset,
+//         .written = 0
+//     };
+//
+//     // Use `dump_ext2_file_on_path` with `dump_file_part_callback`
+//     int ret = dump_ext2_file_on_path(ctx.fs->fd, path, &task_ctx, (on_file_dump_t) dump_file_part_callback);
+//     if (ret < 0) { return ret; }
+//
+//     return (int) task_ctx.written;
+// }
 
 
 static int ext2_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
@@ -268,7 +300,7 @@ int ext2fuse(int img, const char *mntp) {
         return ret; // Return error if initialization fails
     }
 
-    char *argv[] = {"ext2fuse", "-f", (char *) mntp, NULL};
+    char *argv[] = {"ext2fuse", "-f", (char *) mntp, "-o", "max_threads=10", NULL};
     ret = fuse_main(3, argv, &ext2_ops, NULL);
 
     ext2_fs_free(ctx.fs);

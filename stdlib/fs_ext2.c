@@ -56,10 +56,12 @@ int ext2_fs_init(struct ext2_fs **fs, int fd) {
     struct ext2_fs *file_system = NULL;
 
     superblock = fs_xmalloc(sizeof(fs_superblock));
+    // printf("super block fs_xmalloc returned %p\n", superblock);
     ret = init_superblock(fd, superblock);
     if (ret != 0) goto clenup;
 
     file_system = fs_xmalloc(sizeof(struct ext2_fs));
+    // printf("fs_xmalloc returned %p\n", file_system);
     file_system->fd = fd;
     file_system->superblock = superblock;
     *fs = file_system;
@@ -543,6 +545,13 @@ cleanup:
 }
 
 void ext2_entity_free(struct ext2_entity *entity) {
-    fs_xfree(entity->file_system);
+    if (entity != NULL) {
+        // printf("fs_xfree(%p)\n", entity->file_system);
+        if (entity->file_system != NULL) {
+            // printf("super fs_xfree(%p)\n", entity->file_system->superblock);
+            fs_xfree(entity->file_system->superblock);
+        }
+        fs_xfree(entity->file_system);
+    }
     fs_xfree(entity);
 }
