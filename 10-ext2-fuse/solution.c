@@ -184,10 +184,11 @@ static int ext2_open(const char *path, struct fuse_file_info *fi) {
     int ret;
     struct ext2_entity *entity = NULL;
     static fs_inode *inode_ptr = NULL;
+    fs_blockgroup_descriptor *blockgroup_descriptor = NULL;
     ret = ext2_entity_init(ctx.fs->fd, path, &entity);
     if (ret != 0) { goto cleanup; }
 
-    fs_blockgroup_descriptor *blockgroup_descriptor = fs_xmalloc(sizeof(fs_blockgroup_descriptor));
+    blockgroup_descriptor = fs_xmalloc(sizeof(fs_blockgroup_descriptor));
     uint32_t block_group = (entity->inode - 1) / ctx.fs->superblock->s_inodes_per_group;
 
     ret = init_blockgroup_descriptor(ctx.fs->fd, ctx.fs->superblock, blockgroup_descriptor, block_group);
