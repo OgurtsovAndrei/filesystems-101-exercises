@@ -23,6 +23,7 @@ static struct ext2_context ctx;
 static int ext2_getattr(const char *path, struct stat *stbuf, struct fuse_file_info *fi) {
     // printf("ext2 getattr - path: %s\n", path);
 
+    (void) fi;
     int ret = 0;
     struct ext2_entity *entity = NULL;
     fs_inode *inode = NULL;
@@ -213,13 +214,13 @@ struct read_context {
 
 static size_t read_file_callback(const void *buffer, size_t bytes_to_write, off_t offset, void *context) {
     if (offset != 0) err(1, "read_file_callback");
-    struct read_context *ctx = (struct read_context *) context;
+    struct read_context *my_context = (struct read_context *) context;
 
     // Copy the data directly into the FUSE buffer
-    memcpy(ctx->buf + ctx->written, buffer, bytes_to_write);
+    memcpy(my_context->buf + my_context->written, buffer, bytes_to_write);
 
     // Update the number of bytes written
-    ctx->written += bytes_to_write;
+    my_context->written += bytes_to_write;
 
     return bytes_to_write;
 }
@@ -252,7 +253,7 @@ static int ext2_read(const char *path, char *buf, size_t size, off_t offset, str
     };
 
     // Use `dump_ext2_file_on_path` with `dump_file_part_callback`
-    int ret = dump_ext2_file_on_path(ctx.fs->fd, path, &task_ctx, dump_file_part_callback);
+    int ret = dump_ext2_file_on_path(ctx.fs->fd, path, &task_ctx, (on_file_dump_t) dump_file_part_callback);
     if (ret < 0) { return ret; }
 
     return (int) task_ctx.written;

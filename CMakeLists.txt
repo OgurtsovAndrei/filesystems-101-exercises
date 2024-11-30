@@ -10,7 +10,7 @@ add_definitions(-D_MY_DEBUG)
 
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fsanitize=undefined -Wall -Wextra -Werror")
 add_definitions(-Wall -Wextra -Wshadow)
-#add_definitions(-Werror)
+add_definitions(-Werror)
 
 add_compile_options(-fsanitize=address -fsanitize=undefined)
 add_link_options(-fsanitize=address -fsanitize=undefined)

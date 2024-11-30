@@ -19,6 +19,9 @@
 
 #pragma pack(push, 1)
 
+struct ext2_fs;
+struct ext2_blkiter;
+
 typedef struct {
     uint32_t inode; // Byte 0-3: Inode number
     uint16_t entry_size; // Byte 4-5: Total size of this entry (Including all subfields)

@@ -91,7 +91,7 @@ static inline size_t file_write_callback(const void* buffer, size_t bytes_to_wri
     return pwrite(out, buffer, bytes_to_write, bytes_read);
 }
 
-typedef int (*on_file_dump_t)(const int img, int inode, void* context);
+typedef size_t (*on_file_dump_t)(const int img, int inode, void* context);
 
 int dump_ext2_file(int img, int inode_nr, void* context, on_write_t on_write);
 
