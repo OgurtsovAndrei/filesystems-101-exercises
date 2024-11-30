@@ -12,6 +12,7 @@
 
 
 void vector_init(fs_vector *vector) {
+    // printf("Initializing vector\n");
     vector->data = malloc(sizeof(void *) * INITIAL_CAPACITY);
     if (!vector->data) {
         fprintf(stderr, "Failed to allocate memory\n");
@@ -22,6 +23,7 @@ void vector_init(fs_vector *vector) {
 }
 
 void vector_add(fs_vector *vector, void *element) {
+    // printf("vector add %lu element: %p\n", vector->size, element);
     if (vector->size == vector->capacity) {
         vector->capacity *= 2;
         vector->data = fs_xrealloc(vector->data, sizeof(void *) * vector->capacity);

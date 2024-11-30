@@ -27,5 +27,4 @@ int init_blockgroup_descriptor(int fd, fs_superblock *superblock, fs_blockgroup_
 
 void print_block_group_descriptor_info(const fs_blockgroup_descriptor *descriptor);
 
-
 #endif // FS_BLOCK_GROUP_DESCRIPTOR_H

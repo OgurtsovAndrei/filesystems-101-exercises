@@ -9,7 +9,9 @@
 #include <asm-generic/errno.h>
 
 int init_superblock(int fd, fs_superblock *superblock) {
-    if (pread(fd, superblock, sizeof(fs_superblock), SUPERBLOCK_OFFSET) != sizeof(fs_superblock)) return -EPROTO;
+    ssize_t read = pread(fd, superblock, sizeof(fs_superblock), SUPERBLOCK_OFFSET);
+    // printf("Reading superblock at %p, from fd: %i, with res: %li\n", superblock, fd, read);
+    if (read != sizeof(fs_superblock)) return -EPROTO;
     if (superblock->s_magic != 0xEF53) return -EPROTO;
     return 0;
 }

@@ -2,6 +2,7 @@
 #include "fs_inode.h"
 #include <stdint.h>
 
+#include "fs_dir_entry.h"
 #include "fs_void_vector.h"
 
 static const int ROOT_INODE_ID = 2;
@@ -83,25 +84,35 @@ int get_inode_block_address_by_index(
     struct ext2_blkiter *bllkiter
 );
 
-typedef int (*on_write_t)(const void* buffer, size_t bytes_to_write, off_t bytes_read, void* context);
+typedef size_t (*on_write_t)(const void* buffer, size_t bytes_to_write, off_t offset, void* context);
 
-static inline int file_write_callback(const void* buffer, size_t bytes_to_write, off_t bytes_read, void* context) {
+static inline size_t file_write_callback(const void* buffer, size_t bytes_to_write, off_t bytes_read, void* context) {
     const int out = *(int*)context;
     return pwrite(out, buffer, bytes_to_write, bytes_read);
 }
 
-/**
-   Implement this function to copy the content of an inode @inode_nr
-   to a file descriptor @out. @img is a file descriptor of an open
-   ext2 image.
+typedef int (*on_file_dump_t)(const int img, int inode, void* context);
 
-   It suffices to support single- and double-indirect blocks.
-
-   If a copy was successful, return 0. If an error occurred during
-   a read or a write, return -errno.
-*/
 int dump_ext2_file(int img, int inode_nr, void* context, on_write_t on_write);
+
+int dump_ext2_file_part(int img, int inode_nr, void* context, on_write_t on_write, uint32_t offset, uint32_t size);
+
+static inline size_t file_dump_callback(const int img, int inode, void* context) {
+    return dump_ext2_file(img, inode, context, file_write_callback);
+}
 
 void parse_path_to_segments(const char *path, fs_vector *segments);
 
-int dump_ext2_file_on_path(int img, const char *path, void* context, on_write_t on_write);
+int dump_ext2_file_on_path(int img, const char *path, void* context, on_file_dump_t on_dump);
+
+
+struct ext2_entity {
+    int img;
+    const char *path;
+    uint32_t inode;
+    struct ext2_fs *file_system;
+};
+
+int ext2_entity_init(int img, const char *path, struct ext2_entity** entity);
+
+void ext2_entity_free(struct ext2_entity *entity);

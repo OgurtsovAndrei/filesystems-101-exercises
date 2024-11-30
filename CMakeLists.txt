@@ -5,11 +5,12 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
 add_definitions(-D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC)
+add_definitions(-D_MY_DEBUG)
 
 
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fsanitize=undefined -Wall -Wextra -Werror")
 add_definitions(-Wall -Wextra -Wshadow)
-add_definitions(-Werror)
+#add_definitions(-Werror)
 
 add_compile_options(-fsanitize=address -fsanitize=undefined)
 add_link_options(-fsanitize=address -fsanitize=undefined)
@@ -191,6 +192,8 @@ add_executable(10
         stdlib/fs_void_vector.c
         stdlib/fs_void_vector.h
 )
+target_link_libraries(10 ${FUSE3_LIBRARIES})
+
 
 # curl -s -X POST http://185.106.102.104:9091/submit/OgurtsovAndrei/03-io_uring
 # curl -s -X GET http://185.106.102.104:9091/results/OgurtsovAndrei/03-io_uring/last | jq

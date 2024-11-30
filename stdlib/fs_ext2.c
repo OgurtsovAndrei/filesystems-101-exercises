@@ -75,7 +75,6 @@ void ext2_fs_free(struct ext2_fs *fs) {
     if (fs == NULL) return;
     fs_superblock *superblock = fs->superblock;
     free(superblock);
-    close(fs->fd);
     free(fs);
 }
 
@@ -142,7 +141,7 @@ int get_inode_block_address_by_index(int fd, uint32_t inode_index,
     }
 
     char *cache = bllkiter->indirect_pointer_cache;
-    char *single_cache = cache;              // Block 1
+    char *single_cache = cache; // Block 1
     char *double_cache = cache + block_size; // Block 2
     char *triple_cache = cache + 2 * block_size; // Block 3
 
@@ -161,7 +160,8 @@ int get_inode_block_address_by_index(int fd, uint32_t inode_index,
         goto end_get_id;
     }
 
-    if (inode_index < DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE + block_size / BLOCK_ADDRESS_SIZE * (block_size / BLOCK_ADDRESS_SIZE)) {
+    if (inode_index < DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE + block_size / BLOCK_ADDRESS_SIZE * (
+            block_size / BLOCK_ADDRESS_SIZE)) {
         // Double indirect block
         uint32_t doubly_offset = inode_index - (DIRECT_POINTERS + block_size / BLOCK_ADDRESS_SIZE);
         uint32_t singly_index = doubly_offset / (block_size / BLOCK_ADDRESS_SIZE);
@@ -228,7 +228,7 @@ end_get_id:
 }
 
 
-int dump_ext2_file(int img, int inode_nr, void* context, on_write_t on_write){
+int dump_ext2_file(int img, int inode_nr, void *context, on_write_t on_write) {
     struct ext2_fs *fs = NULL;
     struct ext2_blkiter *i = NULL;
     int ret;
@@ -258,7 +258,7 @@ int dump_ext2_file(int img, int inode_nr, void* context, on_write_t on_write){
             bytes_read += bytes_to_write;
             // print_extra_data(buffer, i->block_size);
             // printf("Buffer content:\n%.*s\n", i->block_size, buffer);
-        } else /* ret == 0 */  {
+        } else /* ret == 0 */ {
             break;
         }
     }
@@ -268,16 +268,92 @@ int dump_ext2_file(int img, int inode_nr, void* context, on_write_t on_write){
     ext2_fs_free(fs);
     return 0;
 
-    cleanup:
-        free(buffer);
-    cleanup_no_buff:
-        ext2_blkiter_free(i);
+cleanup:
+    free(buffer);
+cleanup_no_buff:
+    ext2_blkiter_free(i);
     ext2_fs_free(fs);
     return ret;
 }
 
+int dump_ext2_file_part(int img, int inode_nr, void *context, on_write_t on_write, uint32_t offset, uint32_t size) {
+    struct ext2_fs *fs = NULL;
+    struct ext2_blkiter *i = NULL;
+    int ret;
 
-int dump_ext2_file_on_path(int img, const char *path, void* context, on_write_t on_write) {
+    if ((ret = ext2_fs_init(&fs, img))) goto cleanup_no_buff;
+    if ((ret = ext2_blkiter_init(&i, fs, inode_nr))) goto cleanup_no_buff;
+
+    char *buffer = fs_xmalloc(i->block_size);
+
+    uint32_t file_size = i->inode->size_lower;
+
+    if (offset >= file_size) {
+        ret = -EINVAL; // Invalid argument
+        goto cleanup_no_buff;
+    }
+    if (offset + size > file_size) {
+        size = file_size - offset;
+    }
+
+    uint32_t bytes_to_read = size;
+    uint32_t bytes_read = 0;
+
+    uint32_t start_block = offset / i->block_size;
+    uint32_t start_block_offset = offset % i->block_size;
+
+    i->iterator_block_index = start_block;
+
+    for (;;) {
+        int blkno;
+        ret = ext2_blkiter_next(i, &blkno);
+        if (ret < 0) goto cleanup;
+
+        if (ret > 0) {
+            read_block(img, i->block_size, blkno, buffer);
+
+            uint32_t block_offset = 0;
+            uint32_t block_bytes_to_write = i->block_size;
+
+            if (bytes_read == 0) {
+                block_offset = start_block_offset;
+                block_bytes_to_write -= block_offset;
+            }
+
+            if (block_bytes_to_write > bytes_to_read) {
+                block_bytes_to_write = bytes_to_read;
+            }
+
+            const uint32_t bytes_written = on_write(buffer + block_offset, block_bytes_to_write, offset + bytes_read,
+                                                    context);
+            if (bytes_written != block_bytes_to_write) {
+                ret = -EIO;
+                goto cleanup;
+            }
+
+            bytes_read += block_bytes_to_write;
+            bytes_to_read -= block_bytes_to_write;
+
+            if (bytes_to_read == 0) break;
+        } else /* ret == 0 */ {
+            break;
+        }
+    }
+
+    free(buffer);
+    ext2_blkiter_free(i);
+    ext2_fs_free(fs);
+    return 0;
+
+cleanup:
+    free(buffer);
+cleanup_no_buff:
+    ext2_blkiter_free(i);
+    ext2_fs_free(fs);
+    return ret;
+}
+
+int dump_ext2_file_on_path(int img, const char *path, void *context, on_file_dump_t on_dump) {
     int ret = 0;
     struct ext2_fs *file_system = NULL;
     struct ext2_blkiter *blkiter = NULL;
@@ -324,7 +400,7 @@ int dump_ext2_file_on_path(int img, const char *path, void* context, on_write_t 
                     goto clean_segment;
                 }
 
-                ret = dump_ext2_file(img, (int) entry->inode, context, on_write);
+                ret = on_dump(img, (int) entry->inode, context);
                 goto clean_segment;
             }
             // have to be directory
@@ -364,4 +440,109 @@ cleanup:
     vector_free(&path_segments);
     ext2_fs_free(file_system);
     return ret;
+}
+
+int ext2_entity_init(int img, const char *path, struct ext2_entity **entity) {
+    int ret = 0;
+    struct ext2_fs *file_system = NULL;
+    if ((ret = ext2_fs_init(&file_system, img))) return ret;
+
+    fs_vector path_segments;
+    vector_init(&path_segments);
+    parse_path_to_segments(path, &path_segments);
+
+    if (path_segments.size == 0) {
+        struct ext2_entity *new_entity = fs_xmalloc(sizeof(struct ext2_entity));
+        new_entity->path = path;
+        new_entity->img = img;
+        new_entity->inode = ROOT_INODE_ID;
+        new_entity->file_system = file_system;
+        *entity = new_entity;
+        goto cleanup;
+    }
+
+    int current_inode = ROOT_INODE_ID;
+
+    VectorIterator iterator;
+    vector_iterator_init(&iterator, &path_segments);
+
+    while (vector_iterator_has_next(&iterator) && current_inode != 0) {
+        struct ext2_blkiter *blkiter = NULL;
+        fs_string *segment = vector_iterator_next(&iterator);
+        // printf("Look for:  %.*s\n", (int) segment->length, segment->data);
+
+        if ((ret = ext2_blkiter_init(&blkiter, file_system, current_inode))) {
+            ret = -ENOENT;
+            goto cleanup;
+        }
+
+        fs_vector dir_entries;
+        dump_directory(file_system, blkiter, &dir_entries);
+
+        uint32_t segment_inode = 0;
+        VectorIterator dir_entries_iterator;
+        vector_iterator_init(&dir_entries_iterator, &dir_entries);
+        // printf("Entries:\n");
+        while (vector_iterator_has_next(&dir_entries_iterator)) {
+            dir_entry *entry = (dir_entry *) vector_iterator_next(&dir_entries_iterator);
+            if (iterator.current == iterator.vector->size) {
+                // have to be a file
+                char *file_name = get_name(entry);
+                // printf("File name: %s\n", file_name);
+                if (strlen(file_name) != segment->length || 0 != memcmp(file_name, segment->data, segment->length)) {
+                    free(file_name);
+                    continue;
+                }
+                free(file_name);
+
+                struct ext2_entity *new_entity = fs_xmalloc(sizeof(struct ext2_entity));
+
+                new_entity->path = path;
+                new_entity->img = img;
+                new_entity->inode = entry->inode;
+                new_entity->file_system = file_system;
+                *entity = new_entity;
+
+                goto clean_segment;
+            }
+            // have to be directory
+            char *dir_name = get_name(entry);
+            // printf("Directory name: %s\n", dir_name);
+            size_t dir_name_len = strlen(dir_name);
+            if (dir_name_len != segment->length || 0 != strncmp(dir_name, segment->data, dir_name_len)) {
+                free(dir_name);
+                continue;
+            }
+            free(dir_name);
+            if (!is_dir(entry)) {
+                ret = -ENOTDIR;
+                goto clean_segment;
+            }
+
+            segment_inode = entry->inode;
+            break;
+        }
+
+        if (segment_inode == 0) {
+            ret = -ENOENT;
+        }
+
+    clean_segment:
+        // printf("segment Cleanup\n");
+        current_inode = (int) segment_inode;
+        vector_free_all_elements(&dir_entries, (void (*)(void *)) free_entry);
+        vector_free(&dir_entries);
+        ext2_blkiter_free(blkiter);
+    }
+
+
+cleanup:
+    vector_free_all_elements(&path_segments, (void (*)(void *)) fs_string_free);
+    vector_free(&path_segments);
+    return ret;
+}
+
+void ext2_entity_free(struct ext2_entity *entity) {
+    fs_xfree(entity->file_system);
+    fs_xfree(entity);
 }

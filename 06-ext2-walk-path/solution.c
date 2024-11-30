@@ -10,5 +10,5 @@
 
 
 int dump_file(int img, const char *path, int out) {
-    return dump_ext2_file_on_path(img, path, &out, file_write_callback);
+    return dump_ext2_file_on_path(img, path, &out, file_dump_callback);
 }
