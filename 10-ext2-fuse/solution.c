@@ -43,7 +43,6 @@ static int ext2_getattr(const char *path, struct stat *stbuf, struct fuse_file_i
     ret = init_blockgroup_descriptor(ctx.fs->fd, ctx.fs->superblock, blockgroup_descriptor, block_group);
     if (ret != 0) goto cleanup;
 
-
     ret = init_inode(ctx.fs->fd, ctx.fs->superblock, blockgroup_descriptor, (int) entity->inode, &inode);
     if (ret != 0) { goto cleanup; }
 
@@ -65,105 +64,61 @@ static int ext2_getattr(const char *path, struct stat *stbuf, struct fuse_file_i
 
 
 cleanup:
-    if (blockgroup_descriptor) free(blockgroup_descriptor);
-    if (inode && ret != 0) free(inode);
+    free(blockgroup_descriptor);
+    free(inode);
 only_entry_cleanup:
-    if (entity) ext2_entity_free(entity);
     return ret;
 }
 
 static int ext2_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset,
                         struct fuse_file_info *fi, enum fuse_readdir_flags flags) {
     // printf("ext2_readdir\n");
-    (void) offset; // Offset is not used
+    if (offset != 0) errx(3, "offset not supported");
     (void) fi; // File info is not used
     (void) flags; // Flags are not used
 
     int ret = 0;
-    struct ext2_fs *file_system = NULL;
+    struct ext2_entity *entity = NULL;
     struct ext2_blkiter *blkiter = NULL;
 
-    if ((ret = ext2_fs_init(&file_system, ctx.fs->fd))) {
-        return ret;
+    ret = ext2_entity_init(ctx.fs->fd, path, &entity);
+    if (ret != 0) {
+        // printf("Error finding entity for path: %s\n", path);
+        ret = -ENOENT;
+        goto only_entry_cleanup;
     }
 
-    fs_vector path_segments;
-    vector_init(&path_segments);
-    parse_path_to_segments(path, &path_segments);
-
-    VectorIterator iterator;
-    vector_iterator_init(&iterator, &path_segments);
-
-    int current_inode = ROOT_INODE_ID;
-
-    while (vector_iterator_has_next(&iterator) && current_inode != 0) {
-        fs_string *segment = vector_iterator_next(&iterator);
-
-        if ((ret = ext2_blkiter_init(&blkiter, file_system, current_inode))) {
-            ret = -ENOENT;
-            goto cleanup;
-        }
-
-        fs_vector dir_entries;
-        dump_directory(file_system, blkiter, &dir_entries);
-
-        uint32_t segment_inode = 0;
-        VectorIterator dir_entries_iterator;
-        vector_iterator_init(&dir_entries_iterator, &dir_entries);
-
-        while (vector_iterator_has_next(&dir_entries_iterator)) {
-            dir_entry *entry = (dir_entry *) vector_iterator_next(&dir_entries_iterator);
-            char *entry_name = get_name(entry);
-
-            // Check if the current entry matches the segment
-            if (strlen(entry_name) == segment->length &&
-                memcmp(entry_name, segment->data, segment->length) == 0) {
-                free(entry_name);
-
-                // If it's the last segment, ensure it's a directory
-                if (iterator.current == iterator.vector->size) {
-                    if (!is_dir(entry)) {
-                        ret = -ENOTDIR;
-                        goto clean_segment;
-                    }
-
-                    segment_inode = entry->inode;
-                    break;
-                }
-
-                segment_inode = entry->inode;
-                break;
-            }
-
-            free(entry_name);
-        }
-
-        if (segment_inode == 0) {
-            ret = -ENOENT;
-        }
-
-    clean_segment:
-        current_inode = (int) segment_inode;
-        vector_free_all_elements(&dir_entries, (void (*)(void *)) free_entry);
-        vector_free(&dir_entries);
-        ext2_blkiter_free(blkiter);
-    }
-
-    if ((ret = ext2_blkiter_init(&blkiter, file_system, current_inode))) {
+    if ((ret = ext2_blkiter_init(&blkiter, entity->file_system, entity->inode))) {
         ret = -ENOENT;
         goto cleanup;
     }
 
     fs_vector dir_entries;
-    dump_directory(file_system, blkiter, &dir_entries);
+    dump_directory(entity->file_system, blkiter, &dir_entries);
 
     VectorIterator dir_iterator;
     vector_iterator_init(&dir_iterator, &dir_entries);
 
+
     while (vector_iterator_has_next(&dir_iterator)) {
         dir_entry *entry = (dir_entry *) vector_iterator_next(&dir_iterator);
-        char *entry_name = get_name(entry);
-        filler(buf, entry_name, NULL, 0, 0); // Add entry to FUSE buffer
+
+        char *entry_name = strndup(entry->name, entry->name_length);
+        if (!entry_name) {
+            ret = -ENOMEM;
+            break;
+        }
+        struct stat st;
+        memset(&st, 0, sizeof(st));
+        if (entry->type_indicator == 2) {
+            st.st_mode = S_IFDIR | 0755;
+        } else if (entry->type_indicator == 1) {
+            st.st_mode = S_IFREG | 0644;
+        } else {
+            st.st_mode = 0; // Unknown
+        }
+        filler(buf, entry_name, &st, 0, 0);
+
         free(entry_name);
     }
 
@@ -171,11 +126,9 @@ static int ext2_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off
     vector_free(&dir_entries);
 
 cleanup:
-    vector_free_all_elements(&path_segments, (void (*)(void *)) fs_string_free);
-    vector_free(&path_segments);
     ext2_blkiter_free(blkiter);
-    ext2_fs_free(file_system);
-
+only_entry_cleanup:
+    ext2_entity_free(entity);
     return ret;
 }
 
@@ -213,7 +166,7 @@ struct read_context {
     size_t written; // Number of bytes written to buffer
 };
 
-static size_t read_file_callback(const void *buffer, size_t bytes_to_write, off_t offset, void *context) {
+static size_t read_file_callback(const void *buffer, size_t bytes_to_write, const off_t offset, void *context) {
     if (offset != 0) err(1, "read_file_callback");
     struct read_context *my_context = (struct read_context *) context;
 
